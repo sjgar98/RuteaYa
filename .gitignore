@@ -1,0 +1,6 @@
+.vs
+.claude
+.agents
+.mcp.json
+bin/
+obj/
