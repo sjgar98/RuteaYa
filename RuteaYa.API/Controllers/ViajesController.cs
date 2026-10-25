@@ -1,13 +1,13 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RuteaYa.API.Extensiones;
 using RuteaYa.API.Servicios.Interfaces;
 using RuteaYa.DTOs;
-using RuteaYa.Entidades;
 
 namespace RuteaYa.API.Controllers
 {
-    // TODO Autenticación: descomentar cuando esté configurado JWT en Program.cs.
-    // [Authorize]
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class ViajesController : ControllerBase
@@ -26,10 +26,7 @@ namespace RuteaYa.API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<List<ViajeDto>>> Listar([FromQuery] bool? activo)
         {
-            // TODO Autenticación: tomar el usuario del token y quitar el usuario de prueba
-            // (requiere using System.Security.Claims).
-            // var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var usuarioId = UsuarioPrueba.Id;
+            var usuarioId = User.ObtenerUsuarioId();
 
             var viajes = await _viajeServicio.ListarPorUsuarioAsync(usuarioId, activo);
             return Ok(viajes);
@@ -44,10 +41,7 @@ namespace RuteaYa.API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<ViajeDetalleDto>> Obtener(int id)
         {
-            // TODO Autenticación: tomar el usuario del token y quitar el usuario de prueba
-            // (requiere using System.Security.Claims).
-            // var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var usuarioId = UsuarioPrueba.Id;
+            var usuarioId = User.ObtenerUsuarioId();
 
             var viaje = await _viajeServicio.ObtenerDetalleAsync(usuarioId, id);
             if (viaje == null)
@@ -67,10 +61,7 @@ namespace RuteaYa.API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<ViajeDto>> Crear([FromBody] CrearViajeDto dto)
         {
-            // TODO Autenticación: tomar el usuario del token y quitar el usuario de prueba
-            // (requiere using System.Security.Claims).
-            // var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var usuarioId = UsuarioPrueba.Id;
+            var usuarioId = User.ObtenerUsuarioId();
 
             var viaje = await _viajeServicio.CrearAsync(usuarioId, dto);
 

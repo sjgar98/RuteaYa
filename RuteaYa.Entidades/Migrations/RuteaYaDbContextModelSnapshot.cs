@@ -231,7 +231,7 @@ namespace RuteaYa.Entidades.Migrations
                             CreadoEn = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Email = "prueba@ruteaya.com",
                             Nombre = "Usuario",
-                            PasswordHash = "SIN-HASH"
+                            PasswordHash = "AQAAAAIAAYagAAAAEKndklYBED8heEK5UUKWAFP0VZIhX94RvKi/4waoLwHrspyn1PcxGIq8VsiZOkk/NQ=="
                         });
                 });
 

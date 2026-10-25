@@ -86,3 +86,31 @@ body {
   font-size: 0.85rem;
   font-weight: 600;
 }
+
+/* General */
+/* asp-validation-summary renderiza el contenedor aunque no haya errores: se oculta hasta que haya alguno. */
+.validation-summary-valid {
+  display: none;
+}
+
+/* Login / Registro */
+.cuenta-fondo {
+  background-color: #f4f5f7;
+  margin-bottom: 0;
+}
+
+.cuenta-contenedor {
+  max-width: 28rem;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 3rem 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.cuenta-marca {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}

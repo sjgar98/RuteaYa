@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RuteaYa.DTOs;
 using RuteaYa.MVC.Models;
@@ -5,8 +6,7 @@ using RuteaYa.MVC.Servicios.Interfaces;
 
 namespace RuteaYa.MVC.Controllers
 {
-    // TODO Autenticación: descomentar cuando esté configurada la cookie en Program.cs.
-    // [Authorize]
+    [Authorize]
     public class ViajesController : Controller
     {
         private readonly IViajeServicio _viajeServicio;
