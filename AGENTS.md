@@ -84,7 +84,7 @@ Reglas duras del enunciado:
 - Namespaces con llaves (no file-scoped), campos `_camelCase` inyectados por constructor,
   colecciones inicializadas con `new List<T>()`, strings con `= string.Empty`, navegaciones `= null!`.
 - Comentarios breves y solo cuando explican un *por qué*. Pendientes con formato
-  `// TODO <Área>: <qué falta>` (áreas actuales: `Layout`, `Servicio de rutas`,
+  `// TODO <Área>: <qué falta>` (áreas actuales: `Servicio de rutas`,
   `Servicio de mapas`, `Paquetes asignados`). Buscar con `grep -rn "TODO" --include=*.cs --include=*.cshtml`.
 - Validaciones de entrada: Data Annotations en el DTO con `ErrorMessage` en español (voseo:
   "Seleccioná…"). Validaciones entre campos con atributos de `RuteaYa.DTOs/Validaciones`:
@@ -141,7 +141,7 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 
 | # | Pantalla / recurso | API | MVC | Estado |
 |---|---|---|---|---|
-| 1 | Login / Registro / Logout | ✅ `POST api/usuarios/registro` (201 / 400 / 409), `POST api/usuarios/login` (200 con JWT / 401) | ✅ `CuentaController` (Login, Registro, Logout) con `_LayoutCuenta`, cookie con claim `"token"` | ✅ (ver 6.1). Logout provisorio en el navbar hasta el layout con sidebar |
+| 1 | Login / Registro / Logout | ✅ `POST api/usuarios/registro` (201 / 400 / 409), `POST api/usuarios/login` (200 con JWT / 401) | ✅ `CuentaController` (Login, Registro, Logout) con `_LayoutCuenta`, cookie con claim `"token"` | ✅ (ver 6.1) |
 | 2 | Dashboard | ❌ (resumen: próximos viajes, envíos pendientes, nº oportunidades, potencial del mes) | 🟡 `HomeController.Index` es placeholder | ❌ |
 | 3 | Mis viajes | ✅ `GET api/viajes?activo=` | ✅ `Viajes/Index` (filtros Todos/Activos/Inactivos, toast) | 🟡 Ver detalle ✅; los botones Oportunidades / Desactivar apuntan a acciones que **no existen** |
 | 4 | Nuevo viaje | ✅ `POST api/viajes`, ✅ `GET api/viajes/direcciones?texto=` (lista fija) | ✅ `Viajes/Nuevo` + `_FormularioViaje` + `formulario-viaje.js` (paradas: agregar/quitar/reordenar) | 🟡 Distancia/duración = 0 (sin servicio de rutas), direcciones mock, sin mapa |
@@ -157,7 +157,7 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 | 13 | Historial | ❌ `GET api/historial?desde=&hasta=&estado=` | ❌ | ❌ |
 | 14 | Potencial mensual (req. para 10) | ❌ `GET api/potencial?mes=yyyy-MM&criterio=` (`ganancia`, `desvio` o `equilibrio`) | ❌ | ❌ |
 | — | Servicio de rutas/mapas | ❌ interfaz (p. ej. `IRutasServicio`) + impl. mock + impl. real opcional | — | ❌ |
-| — | Layout con sidebar (Inicio, Mis viajes, Mis envíos, Oportunidades, Optimizador, Mis transportes, Historial, usuario + Cerrar sesión) | — | 🟡 `_Layout.cshtml` es el navbar por defecto de la plantilla | 🟡 |
+| — | Layout con sidebar | — | ✅ `_Layout.cshtml` + `_MenuLateral.cshtml` (secciones → `/<Controller>`, activa según el controller actual) + `_MenuUsuario.cshtml` (nombre, email, Cerrar sesión). En celulares el menú es un offcanvas | ✅ Controllers esperados: `Envios`, `Oportunidades`, `Optimizador`, `Transportes`, `Historial`, `Potencial` (acción `Index`); si se usa otro nombre, cambiarlo en `_MenuLateral` |
 | — | Tests unitarios por endpoint | — | — | 🟡 `UsuarioServicio`, `ViajeServicio.ObtenerDetalleAsync` y `ActualizarAsync` |
 | — | README (cómo correr y configurar BD desde cero) | — | — | ❌ |
 
