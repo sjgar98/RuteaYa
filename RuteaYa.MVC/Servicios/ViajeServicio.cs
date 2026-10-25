@@ -1,4 +1,6 @@
+using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc;
 using RuteaYa.DTOs;
 using RuteaYa.MVC.Servicios.Interfaces;
 
@@ -18,6 +20,26 @@ namespace RuteaYa.MVC.Servicios
         {
             var url = activo.HasValue ? $"api/viajes?activo={activo.Value.ToString().ToLower()}" : "api/viajes";
             return await _http.GetFromJsonAsync<List<ViajeDto>>(url) ?? new List<ViajeDto>();
+        }
+
+        public async Task<Dictionary<string, string[]>> CrearAsync(CrearViajeDto dto)
+        {
+            var respuesta = await _http.PostAsJsonAsync("api/viajes", dto);
+
+            if (respuesta.StatusCode == HttpStatusCode.BadRequest)
+            {
+                var problema = await respuesta.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+                return new Dictionary<string, string[]>(problema?.Errors ?? new Dictionary<string, string[]>());
+            }
+
+            respuesta.EnsureSuccessStatusCode();
+            return new Dictionary<string, string[]>();
+        }
+
+        public async Task<List<DireccionDto>> BuscarDireccionesAsync(string texto)
+        {
+            var url = $"api/viajes/direcciones?texto={Uri.EscapeDataString(texto)}";
+            return await _http.GetFromJsonAsync<List<DireccionDto>>(url) ?? new List<DireccionDto>();
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using RuteaYa.API.Servicios.Interfaces;
 using RuteaYa.DTOs;
@@ -30,6 +31,36 @@ namespace RuteaYa.API.Controllers
 
             var viajes = await _viajeServicio.ListarPorUsuarioAsync(usuarioId, activo);
             return Ok(viajes);
+        }
+
+        /// <summary>Registra un viaje habitual del usuario autenticado.</summary>
+        /// <response code="201">Viaje creado.</response>
+        /// <response code="400">Datos inválidos.</response>
+        [HttpPost]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<ViajeDto>> Crear([FromBody] CrearViajeDto dto)
+        {
+            // TODO Autenticación: tomar el usuario del token y quitar el valor fijo.
+            var usuarioId = 1;
+
+            var viaje = await _viajeServicio.CrearAsync(usuarioId, dto);
+
+            // TODO Detalle del viaje: usar CreatedAtAction cuando exista GET api/viajes/{id}.
+            return StatusCode(StatusCodes.Status201Created, viaje);
+        }
+
+        /// <summary>Busca direcciones que coincidan con el texto (origen, destino o paradas).</summary>
+        /// <param name="texto">Texto a buscar, al menos 3 caracteres.</param>
+        [HttpGet("direcciones")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<List<DireccionDto>>> BuscarDirecciones([FromQuery, Required, MinLength(3)] string texto)
+        {
+            var direcciones = await _viajeServicio.BuscarDireccionesAsync(texto);
+            return Ok(direcciones);
         }
     }
 }
