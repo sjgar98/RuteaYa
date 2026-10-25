@@ -1,4 +1,4 @@
-name: CI
+name: Integracion Continua
 
 on:
   pull_request:
