@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+@* Layout de Login y Registro: pantalla centrada, sin menú (todavía no hay sesión). *@
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - RuteaYa</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="cuenta-fondo">
+    <main class="cuenta-contenedor">
+        <div class="text-center mb-4">
+            <div class="cuenta-marca">RuteaYa</div>
+            <p class="text-muted small mb-0">Aprovechá tus viajes para llevar paquetes.</p>
+        </div>
+
+        @RenderBody()
+    </main>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

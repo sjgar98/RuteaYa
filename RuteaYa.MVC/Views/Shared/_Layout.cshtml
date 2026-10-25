@@ -24,6 +24,13 @@
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
                     </ul>
+                    @* TODO Layout: pasar al menú del usuario del sidebar. *@
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small">@User.Identity?.Name</span>
+                        <form asp-controller="Cuenta" asp-action="Logout" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">Cerrar sesión</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </nav>

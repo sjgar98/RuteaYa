@@ -82,7 +82,7 @@ Reglas duras del enunciado:
 - Namespaces con llaves (no file-scoped), campos `_camelCase` inyectados por constructor,
   colecciones inicializadas con `new List<T>()`, strings con `= string.Empty`, navegaciones `= null!`.
 - Comentarios breves y solo cuando explican un *por qué*. Pendientes con formato
-  `// TODO <Área>: <qué falta>` (áreas actuales: `Autenticación`, `Servicio de rutas`,
+  `// TODO <Área>: <qué falta>` (áreas actuales: `Layout`, `Servicio de rutas`,
   `Servicio de mapas`, `Paquetes asignados`). Buscar con `grep -rn "TODO" --include=*.cs --include=*.cshtml`.
 - Validaciones de entrada: Data Annotations en el DTO con `ErrorMessage` en español (voseo:
   "Seleccioná…"). Validaciones entre campos con atributos de `RuteaYa.DTOs/Validaciones`:
@@ -113,7 +113,7 @@ Reglas duras del enunciado:
 
 | Entidad | Campos clave | Relaciones / restricciones |
 |---|---|---|
-| `Usuario` | Nombre, Apellido, Email, PasswordHash, CreadoEn | Email único. Seed: `UsuarioPrueba` (Id 1, prueba@ruteaya.com, hash `SIN-HASH`) |
+| `Usuario` | Nombre, Apellido, Email, PasswordHash, CreadoEn | Email único. Seed: `UsuarioPrueba` (Id 1, prueba@ruteaya.com / `Prueba123`, hash fijo en `UsuarioPrueba.PasswordHash`) |
 | `Viaje` | Origen/Destino (Dir, Lat, Lng), HoraSalida/HoraLlegada (`TimeOnly`), MaxPaquetes, PesoMaxKg, DesvioMaxKm, DistanciaKm, DuracionMin, Activo | N:1 Usuario; 1:N Paradas, Dias, Asignaciones |
 | `ViajeDia` | ViajeId, DiaSemana | PK compuesta (ViajeId, DiaSemana) |
 | `Parada` | ViajeId, Orden (1..n), Direccion, Lat, Lng | Orden = orden del recorrido |
@@ -121,7 +121,7 @@ Reglas duras del enunciado:
 | `Asignacion` | EnvioId, ViajeId, FechaViaje, DesvioKm, TiempoExtraMin, Ganancia, AsignadoEn | **Índice único EnvioId** (un envío se asigna una sola vez → `DbUpdateException` si dos conductores lo toman: mapear a 409). FK a Viaje con `Restrict` (evita doble cascada) |
 | `EnvioEstadoHistorial` | EnvioId, EstadoAnterior?, EstadoNuevo, Fecha | Registrar cada transición de estado |
 
-Migraciones: `20261025012306_Inicial`, `20261025175519_SeedUsuarioPrueba`. El seed usa `HasData`
+Migraciones: `20261025012306_Inicial`, `20261025175519_SeedUsuarioPrueba`, `20261025200751_HashUsuarioPrueba`. El seed usa `HasData`
 con valores fijos. El enunciado exige **datos iniciales suficientes** para probar todo (falta
 sembrar viajes/envíos de ejemplo, p. ej. los de la sección 8.4).
 
@@ -139,7 +139,7 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 
 | # | Pantalla / recurso | API | MVC | Estado |
 |---|---|---|---|---|
-| 1 | Login / Registro / Logout | ❌ `POST api/usuarios/registro`, `POST api/usuarios/login` (emite JWT) | ❌ `CuentaController` (Login, Registro, Logout), cookie con claim `"token"` | ❌ Andamiaje comentado (ver 6.1) |
+| 1 | Login / Registro / Logout | ✅ `POST api/usuarios/registro` (201 / 400 / 409), `POST api/usuarios/login` (200 con JWT / 401) | ✅ `CuentaController` (Login, Registro, Logout) con `_LayoutCuenta`, cookie con claim `"token"` | ✅ (ver 6.1). Logout provisorio en el navbar hasta el layout con sidebar |
 | 2 | Dashboard | ❌ (resumen: próximos viajes, envíos pendientes, nº oportunidades, potencial del mes) | 🟡 `HomeController.Index` es placeholder | ❌ |
 | 3 | Mis viajes | ✅ `GET api/viajes?activo=` | ✅ `Viajes/Index` (filtros Todos/Activos/Inactivos, toast) | 🟡 Ver detalle ✅; los botones Oportunidades / Desactivar apuntan a acciones que **no existen** |
 | 4 | Nuevo viaje | ✅ `POST api/viajes`, ✅ `GET api/viajes/direcciones?texto=` (lista fija) | ✅ `Viajes/Nuevo` + `nuevo-viaje.js` (paradas: agregar/quitar/reordenar) | 🟡 Distancia/duración = 0 (sin servicio de rutas), direcciones mock, sin mapa |
@@ -161,17 +161,18 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 
 ## 6. Mocks y pendientes transversales
 
-### 6.1 Autenticación (no implementada)
-- API: el usuario sale de `UsuarioPrueba.Id` en cada acción (`var usuarioId = UsuarioPrueba.Id;`).
-  Plan ya escrito en comentarios: paquete `Microsoft.AspNetCore.Authentication.JwtBearer`, clave
-  `Jwt:Key` en appsettings, `AddAuthentication(...).AddJwtBearer(...)` y `app.UseAuthentication()` en
-  `RuteaYa.API/Program.cs`, `[Authorize]` en controllers y
-  `int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!)` para el id.
-- MVC: cookie auth (`LoginPath = "/Cuenta/Login"`) que guarda el JWT como claim `"token"`;
-  `MVC/Servicios/TokenHandler.cs` ya lo agrega como `Authorization: Bearer` a cada llamada.
-- Al implementar: hashear contraseñas (p. ej. `PasswordHasher<Usuario>`), reemplazar el `SIN-HASH`
-  del seed por un hash real (valor fijo, `HasData` lo compara entre migraciones), error genérico
-  "Email o contraseña incorrectos", email único → 409 o 400, y eliminar `UsuarioPrueba` de los controllers.
+### 6.1 Autenticación
+- API: JWT firmado con `Jwt:Key` (`appsettings.json`, vence a los `Jwt:ExpiracionMinutos`), emitido por
+  `TokenServicio` con los claims NameIdentifier (id), Name y Email. **Todo endpoint exige token** por la
+  `FallbackPolicy` de `Program.cs`, salvo `[AllowAnonymous]` (`UsuariosController`). En cada acción:
+  `var usuarioId = User.ObtenerUsuarioId();` (`API/Extensiones/ClaimsPrincipalExtensiones.cs`).
+  **No usar más `UsuarioPrueba.Id` en controllers.** Swagger tiene botón *Authorize*: hacer login y pegar el `token`.
+- Contraseñas: `PasswordHasher<Usuario>` (PBKDF2 con salt). El email se guarda en minúsculas y sin espacios.
+  Reglas: mínimo 8 caracteres con al menos una letra y un número (`RegistroUsuarioDto`).
+  Login incorrecto → 401 genérico "Email o contraseña incorrectos."; email repetido → 409.
+- MVC: cookie (`LoginPath = "/Cuenta/Login"`) que guarda el JWT como claim `"token"` y vence junto con él;
+  `TokenHandler` lo agrega como `Authorization: Bearer`. También hay `FallbackPolicy`: toda pantalla
+  exige sesión salvo `CuentaController` y los archivos estáticos. Nombre del usuario en vistas: `User.Identity.Name`.
 
 ### 6.2 Servicio de rutas / mapas (no implementado)
 - `ViajeServicio.BuscarDireccionesAsync` filtra una lista fija de 12 barrios de CABA/GBA
@@ -286,7 +287,7 @@ cómo se repartieron el trabajo, qué aprendieron. Defensa en llamada con demo.
    controller traduzca a 404/409 (o excepciones de dominio propias capturadas en el controller /
    un filtro); mantener un único criterio en todo el proyecto.
 4. **Controller API**: acción con `///` summary, `<response code>` y `[ProducesResponseType]` para
-   cada código; usuario por `UsuarioPrueba.Id` hasta que exista auth (con el mismo `TODO Autenticación`).
+   cada código; usuario con `User.ObtenerUsuarioId()`.
 5. **Servicio MVC**: método en `MVC/Servicios/Interfaces/I<X>Servicio.cs` + implementación con `HttpClient`;
    si es nuevo, `AddHttpClient<...>().AddHttpMessageHandler<TokenHandler>()` en `MVC/Program.cs`.
    Traducir 400 a `Dictionary<string,string[]>` como `ViajeServicio.CrearAsync`; 404/409 a resultados que la vista pueda mostrar.

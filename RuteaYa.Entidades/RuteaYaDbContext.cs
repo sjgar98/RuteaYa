@@ -56,14 +56,13 @@ namespace RuteaYa.Entidades
             modelBuilder.Entity<Usuario>().HasIndex(u => u.Email).IsUnique();
 
             // Valores fijos: HasData compara el seed entre migraciones.
-            // TODO Autenticación: reemplazar PasswordHash por un hash real cuando exista el registro.
             modelBuilder.Entity<Usuario>().HasData(new Usuario
             {
                 Id = UsuarioPrueba.Id,
                 Nombre = UsuarioPrueba.Nombre,
                 Apellido = UsuarioPrueba.Apellido,
                 Email = UsuarioPrueba.Email,
-                PasswordHash = "SIN-HASH",
+                PasswordHash = UsuarioPrueba.PasswordHash,
                 CreadoEn = new DateTime(2026, 1, 1)
             });
 

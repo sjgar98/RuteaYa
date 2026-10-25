@@ -1,0 +1,36 @@
+@model RuteaYa.DTOs.LoginDto
+@{
+    ViewData["Title"] = "Iniciar sesión";
+    Layout = "_LayoutCuenta";
+}
+
+<form asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post" class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-4">
+        <h1 class="h4 mb-3">Iniciar sesión</h1>
+
+        @* Acá aparece el error genérico de credenciales incorrectas. *@
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger small"></div>
+
+        <div class="mb-3">
+            <label asp-for="Email" class="form-label small fw-semibold">Email</label>
+            <input asp-for="Email" class="form-control" placeholder="nombre@ejemplo.com" autocomplete="email" autofocus />
+            <span asp-validation-for="Email" class="text-danger small"></span>
+        </div>
+
+        <div class="mb-4">
+            <label asp-for="Password" class="form-label small fw-semibold">Contraseña</label>
+            <input asp-for="Password" type="password" class="form-control" autocomplete="current-password" />
+            <span asp-validation-for="Password" class="text-danger small"></span>
+        </div>
+
+        <button type="submit" class="btn btn-dark w-100">Ingresar</button>
+
+        <p class="text-center text-muted small mt-3 mb-0">
+            ¿No tenés cuenta? <a asp-action="Registro">Crear cuenta</a>
+        </p>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
