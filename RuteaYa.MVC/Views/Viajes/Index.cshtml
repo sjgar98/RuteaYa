@@ -1,18 +1,6 @@
-@using RuteaYa.DTOs.Enums
 @model RuteaYa.MVC.Models.MisViajesViewModel
 @{
     ViewData["Title"] = "Mis viajes";
-
-    string Abreviar(DiaSemana dia) => dia switch
-    {
-        DiaSemana.Lunes => "Lun",
-        DiaSemana.Martes => "Mar",
-        DiaSemana.Miercoles => "Mié",
-        DiaSemana.Jueves => "Jue",
-        DiaSemana.Viernes => "Vie",
-        DiaSemana.Sabado => "Sáb",
-        _ => "Dom"
-    };
 
     string ClaseFiltro(bool? filtro) => Model.Activo == filtro ? "btn-dark" : "btn-outline-secondary";
 }
@@ -45,7 +33,7 @@
                     <div>
                         <div class="fw-semibold">@viaje.OrigenDir → @viaje.DestinoDir</div>
                         <div class="text-muted small">
-                            @string.Join(", ", viaje.Dias.Select(Abreviar)) ·
+                            @string.Join(", ", viaje.Dias.Select(d => d.Abreviar())) ·
                             @viaje.HoraSalida.ToString("HH:mm") – @viaje.HoraLlegada.ToString("HH:mm")
                         </div>
                     </div>

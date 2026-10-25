@@ -222,6 +222,17 @@ namespace RuteaYa.Entidades.Migrations
                         .IsUnique();
 
                     b.ToTable("Usuarios");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Apellido = "Prueba",
+                            CreadoEn = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Email = "prueba@ruteaya.com",
+                            Nombre = "Usuario",
+                            PasswordHash = "SIN-HASH"
+                        });
                 });
 
             modelBuilder.Entity("RuteaYa.Entidades.Viaje", b =>

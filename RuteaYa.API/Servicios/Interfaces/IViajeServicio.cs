@@ -5,6 +5,8 @@ namespace RuteaYa.API.Servicios.Interfaces
     public interface IViajeServicio
     {
         Task<List<ViajeDto>> ListarPorUsuarioAsync(int usuarioId, bool? activo);
+        // null si el viaje no existe o no es del usuario.
+        Task<ViajeDetalleDto?> ObtenerDetalleAsync(int usuarioId, int id);
         Task<ViajeDto> CrearAsync(int usuarioId, CrearViajeDto dto);
         Task<List<DireccionDto>> BuscarDireccionesAsync(string texto);
     }

@@ -1,0 +1,103 @@
+@model RuteaYa.DTOs.ViajeDetalleDto
+@{
+    ViewData["Title"] = "Detalle del viaje";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div>
+        <h1 class="h3 mb-0">Detalle del viaje</h1>
+        <p class="text-muted small mb-0">@Model.OrigenDir → @Model.DestinoDir</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary btn-sm" asp-action="Index">Volver</a>
+        <a class="btn btn-outline-secondary btn-sm" asp-action="Editar" asp-route-id="@Model.Id">Editar</a>
+        @if (Model.Activo)
+        {
+            <form asp-action="Desactivar" asp-route-id="@Model.Id" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Desactivar</button>
+            </form>
+        }
+        <a class="btn btn-dark btn-sm" asp-controller="Oportunidades" asp-action="Index" asp-route-viajeId="@Model.Id">Ver oportunidades</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+                <h2 class="h6 fw-semibold mb-3">Recorrido</h2>
+
+                @* TODO Servicio de mapas: mostrar el mapa con el recorrido y sus paradas. *@
+
+                <dl class="detalle-filas mb-0">
+                    <div>
+                        <dt>Estado</dt>
+                        <dd>
+                            @if (Model.Activo)
+                            {
+                                <span class="badge rounded-pill badge-activo">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="badge rounded-pill text-bg-light border">Inactivo</span>
+                            }
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>Días</dt>
+                        <dd>@string.Join(", ", Model.Dias.Select(d => d.Abreviar()))</dd>
+                    </div>
+                    <div>
+                        <dt>Horarios</dt>
+                        <dd>@Model.HoraSalida.ToString("HH:mm") – @Model.HoraLlegada.ToString("HH:mm")</dd>
+                    </div>
+                    <div>
+                        <dt>Capacidad</dt>
+                        <dd>@Model.MaxPaquetes @(Model.MaxPaquetes == 1 ? "paquete" : "paquetes")</dd>
+                    </div>
+                    <div>
+                        <dt>Peso máximo</dt>
+                        <dd>@Model.PesoMaxKg.Numero() kg</dd>
+                    </div>
+                    <div>
+                        <dt>Desvío máximo</dt>
+                        <dd>@Model.DesvioMaxKm.Numero() km</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+                <h2 class="h6 fw-semibold mb-3">Paquetes asignados</h2>
+
+                @if (Model.PaquetesAsignados.Count == 0)
+                {
+                    <p class="text-muted small mb-0">Todavía no tenés paquetes asignados a este viaje.</p>
+                }
+                else
+                {
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var paquete in Model.PaquetesAsignados)
+                        {
+                            <li class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 border-bottom">
+                                <div>
+                                    <div class="fw-semibold">@paquete.Descripcion</div>
+                                    <div class="text-muted small">
+                                        @paquete.Estado.Texto() · Fecha límite @paquete.FechaLimite.ToString("dd/MM/yyyy")
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fw-semibold">@paquete.Ganancia.Moneda()</span>
+                                    <a class="btn btn-outline-secondary btn-sm" asp-controller="Envios" asp-action="Detalle" asp-route-id="@paquete.EnvioId">Ver paquete</a>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>
