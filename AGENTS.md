@@ -66,12 +66,14 @@ Reglas duras del enunciado:
   y `[ProducesResponseType]`; el csproj de la API genera el XML), async/await en I/O.
 
 ### Flujo típico (ej. "Nuevo viaje")
-1. `MVC/Views/Viajes/Nuevo.cshtml` + `wwwroot/js/nuevo-viaje.js` (autocompletado, paradas, validaciones cliente).
+1. `MVC/Views/Viajes/Nuevo.cshtml` → partial `_FormularioViaje.cshtml` (compartido con `Editar`) + `wwwroot/js/formulario-viaje.js`
+   (autocompletado, paradas, validaciones cliente).
 2. `MVC/Controllers/ViajesController.Nuevo [POST]` → valida `ModelState` → `MVC/Servicios/ViajeServicio.CrearAsync`.
 3. `POST api/viajes` → `API/Controllers/ViajesController.Crear` (`[ApiController]` devuelve 400
    `ValidationProblemDetails` automáticamente) → `API/Servicios/ViajeServicio.CrearAsync` → `ViajeRepositorio.AgregarAsync`.
 4. Si la API responde 400, el servicio MVC devuelve `Dictionary<campo, mensajes[]>` y el controller
-   los carga en `ModelState`. Éxito → `TempData["MensajeExito"]` (toast en la vista destino) + redirect.
+   los carga en `ModelState` (`AgregarErrores`). Éxito → `TempData["MensajeExito"]` + redirect; el toast lo
+   muestra `_Layout.cshtml` en cualquier pantalla (`site.js` lo abre e inicializa los tooltips `data-bs-toggle="tooltip"`).
 
 ## 3. Convenciones de código (respetarlas)
 
@@ -88,7 +90,7 @@ Reglas duras del enunciado:
   "Seleccioná…"). Validaciones entre campos con atributos de `RuteaYa.DTOs/Validaciones`:
   `[DistintoDe(nameof(X))]`, `[MayorQue(nameof(X))]`, `[DireccionesUnicas(nameof(A), nameof(B))]`.
   Las reglas que dependen de BD (dueño, estado, disponibilidad) van en el servicio de la API.
-  En el cliente, las mismas reglas se replican con `$.validator.addMethod` (ver final de `nuevo-viaje.js`).
+  En el cliente, las mismas reglas se replican con `$.validator.addMethod` (ver final de `formulario-viaje.js`).
 - Propiedades numéricas obligatorias de DTOs de entrada son nullable (`int?`, `decimal?`, `TimeOnly?`)
   + `[Required]`, y el servicio usa `.Value`.
 - Mapeo entidad→DTO: método `private static XDto ADto(X entidad)` dentro del servicio de la API.
@@ -131,7 +133,7 @@ Repositorios existentes (métodos ya disponibles, muchos aún sin uso):
 - `IEnvioRepositorio`: `ListarPorUsuarioAsync(usuarioId, estado?)`, `ListarDisponiblesAsync(desde, usuarioIdExcluido)` (BuscandoConductor, no vencidos, de otros usuarios), `ListarPorIdsAsync`, `ObtenerPorIdAsync` (con Asignacion+Viaje e Historial), `AgregarAsync`, `GuardarCambiosAsync`.
 - `IAsignacionRepositorio`: `ListarPorConductorAsync`, `ObtenerPorIdAsync`, `AgregarAsync(List<Asignacion>)` (una o varias en un solo `SaveChanges`).
 
-Todos registrados como `Scoped` en `RuteaYa.API/Program.cs`. Solo existe `IViajeServicio` en la API.
+Todos registrados como `Scoped` en `RuteaYa.API/Program.cs`. Servicios de la API: `IViajeServicio`, `IUsuarioServicio`, `ITokenServicio`.
 
 ## 5. Estado por funcionalidad
 
@@ -142,9 +144,9 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 | 1 | Login / Registro / Logout | ✅ `POST api/usuarios/registro` (201 / 400 / 409), `POST api/usuarios/login` (200 con JWT / 401) | ✅ `CuentaController` (Login, Registro, Logout) con `_LayoutCuenta`, cookie con claim `"token"` | ✅ (ver 6.1). Logout provisorio en el navbar hasta el layout con sidebar |
 | 2 | Dashboard | ❌ (resumen: próximos viajes, envíos pendientes, nº oportunidades, potencial del mes) | 🟡 `HomeController.Index` es placeholder | ❌ |
 | 3 | Mis viajes | ✅ `GET api/viajes?activo=` | ✅ `Viajes/Index` (filtros Todos/Activos/Inactivos, toast) | 🟡 Ver detalle ✅; los botones Oportunidades / Desactivar apuntan a acciones que **no existen** |
-| 4 | Nuevo viaje | ✅ `POST api/viajes`, ✅ `GET api/viajes/direcciones?texto=` (lista fija) | ✅ `Viajes/Nuevo` + `nuevo-viaje.js` (paradas: agregar/quitar/reordenar) | 🟡 Distancia/duración = 0 (sin servicio de rutas), direcciones mock, sin mapa |
-| 5 | Detalle / Editar / Desactivar viaje | ✅ `GET api/viajes/{id}` (`ViajeDetalleDto`: paradas + paquetes asignados; 404 si no es propio) · ❌ `PUT api/viajes/{id}`, `PATCH api/viajes/{id}/desactivar` (o `POST`) | ✅ `Viajes/Detalle` · ❌ `Viajes/Editar`, `Viajes/Desactivar [POST]` | 🟡 Detalle hecho; paquetes asignados **mock** (`PaquetesDePrueba()`, `TODO Paquetes asignados`); sin mapa; Editar/Desactivar ❌ |
-| — | Paradas dentro de un viaje | ❌ `POST/PUT/DELETE api/viajes/{id}/paradas[/{paradaId}]` (o vía PUT del viaje) | se editan en el form del viaje | ❌ |
+| 4 | Nuevo viaje | ✅ `POST api/viajes`, ✅ `GET api/viajes/direcciones?texto=` (lista fija) | ✅ `Viajes/Nuevo` + `_FormularioViaje` + `formulario-viaje.js` (paradas: agregar/quitar/reordenar) | 🟡 Distancia/duración = 0 (sin servicio de rutas), direcciones mock, sin mapa |
+| 5 | Detalle / Editar / Desactivar viaje | ✅ `GET api/viajes/{id}` (`ViajeDetalleDto`: coordenadas, paradas, paquetes asignados, `TieneEnviosPendientes`; 404 si no es propio) · ✅ `PUT api/viajes/{id}` (body `CrearViajeDto`; 204 / 400 / 404 / **409 si tiene envíos ConductorAsignado/Retirado/EnCamino**; reemplaza paradas, días por diferencia) · ❌ `PATCH api/viajes/{id}/desactivar` (o `POST`) | ✅ `Viajes/Detalle` (Editar deshabilitado con tooltip si hay envíos pendientes) · ✅ `Viajes/Editar` (mismo form que Nuevo, prepoblado; GET con pendientes redirige a Detalle) · ❌ `Viajes/Desactivar [POST]` | 🟡 Detalle y Editar hechos; paquetes asignados **mock** (`PaquetesDePrueba()`, `TODO Paquetes asignados`; el flag de pendientes sí usa las asignaciones reales); sin mapa; Desactivar ❌ |
+| — | Paradas dentro de un viaje | 🟡 vía `PUT api/viajes/{id}` (lista completa en orden) · ❌ endpoints propios `api/viajes/{id}/paradas` | se editan en el form del viaje | 🟡 |
 | 6 | Nuevo envío | ❌ `POST api/envios` | ❌ `Envios/Nuevo` | ❌ (enum `TamanoEnvio` y entidad ya existen) |
 | 7 | Mis envíos (+ detalle, cancelar) | ❌ `GET api/envios?estado=`, `GET api/envios/{id}`, `POST api/envios/{id}/cancelar` | ❌ `Envios/Index`, `Envios/Detalle` | ❌ |
 | 8 | Oportunidades | ❌ `GET api/viajes/{id}/oportunidades?orden=` (`ganancia`, `desvio` o `compatibilidad`) | ❌ `OportunidadesController.Index(viajeId)` (ya enlazado desde Mis viajes) | ❌ |
@@ -156,7 +158,7 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 | 14 | Potencial mensual (req. para 10) | ❌ `GET api/potencial?mes=yyyy-MM&criterio=` (`ganancia`, `desvio` o `equilibrio`) | ❌ | ❌ |
 | — | Servicio de rutas/mapas | ❌ interfaz (p. ej. `IRutasServicio`) + impl. mock + impl. real opcional | — | ❌ |
 | — | Layout con sidebar (Inicio, Mis viajes, Mis envíos, Oportunidades, Optimizador, Mis transportes, Historial, usuario + Cerrar sesión) | — | 🟡 `_Layout.cshtml` es el navbar por defecto de la plantilla | 🟡 |
-| — | Tests unitarios por endpoint | — | — | 🟡 solo `ViajeServicio.ObtenerDetalleAsync` |
+| — | Tests unitarios por endpoint | — | — | 🟡 `UsuarioServicio`, `ViajeServicio.ObtenerDetalleAsync` y `ActualizarAsync` |
 | — | README (cómo correr y configurar BD desde cero) | — | — | ❌ |
 
 ## 6. Mocks y pendientes transversales
@@ -283,9 +285,9 @@ cómo se repartieron el trabajo, qué aprendieron. Defensa en llamada con demo.
 1. **DTOs** (`RuteaYa.DTOs`): `Crear<X>Dto` (entrada, con Data Annotations) y `<X>Dto` (salida).
 2. **Repositorio** (si hace falta un query nuevo): método en `Interfaces/I<X>Repositorio.cs` + implementación.
 3. **Servicio API**: método en `API/Servicios/Interfaces/I<X>Servicio.cs` + `API/Servicios/<X>Servicio.cs`;
-   registrar `AddScoped` en `API/Program.cs` si es nuevo. Errores de negocio: devolver un resultado que el
-   controller traduzca a 404/409 (o excepciones de dominio propias capturadas en el controller /
-   un filtro); mantener un único criterio en todo el proyecto.
+   registrar `AddScoped` en `API/Program.cs` si es nuevo. Errores de negocio: las lecturas devuelven `null` (→ 404);
+   las operaciones que modifican devuelven `ResultadoOperacion` (`API/Servicios/ResultadoOperacion.cs`:
+   `Exito` / `NoEncontrado` / `Conflicto`) y el controller lo traduce a 2xx / 404 / 409 (ver `ViajesController.Actualizar`).
 4. **Controller API**: acción con `///` summary, `<response code>` y `[ProducesResponseType]` para
    cada código; usuario con `User.ObtenerUsuarioId()`.
 5. **Servicio MVC**: método en `MVC/Servicios/Interfaces/I<X>Servicio.cs` + implementación con `HttpClient`;
@@ -318,7 +320,7 @@ Entregado), Palermo → Avellaneda ($7.000, 8 kg), Caballito → Lomas ($4.000, 
   la app: si la BD no está accesible, la API no arranca.
 - `appsettings.json` del MVC apunta a `https://localhost:7134/` (perfil https de la API); Development usa
   `http://localhost:5125/`. Correr ambos con el mismo esquema.
-- Las acciones MVC `Viajes/Editar`, `Viajes/Desactivar`, `OportunidadesController` y `Envios/Detalle`
+- Las acciones MVC `Viajes/Desactivar`, `OportunidadesController` y `Envios/Detalle`
   están enlazadas desde `Views/Viajes/Index.cshtml` y `Views/Viajes/Detalle.cshtml` pero aún no existen (404).
 - `ListarDisponiblesAsync` solo filtra por estado/fecha/usuario: capacidad, peso, día y desvío se
   calculan en el servicio.

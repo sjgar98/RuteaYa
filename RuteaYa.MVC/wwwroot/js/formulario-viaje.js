@@ -1,6 +1,6 @@
-// Nuevo viaje: autocompletado de direcciones, lista de paradas intermedias y validaciones entre campos.
+// Formulario de viaje (Nuevo y Editar): autocompletado de direcciones, lista de paradas intermedias y validaciones entre campos.
 (function () {
-    const form = document.getElementById('form-nuevo-viaje');
+    const form = document.getElementById('form-viaje');
     if (!form) {
         return;
     }

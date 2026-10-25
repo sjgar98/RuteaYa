@@ -41,34 +41,45 @@ namespace RuteaYa.API.Servicios
             var viaje = new Viaje
             {
                 UsuarioId = usuarioId,
-                OrigenDir = dto.OrigenDir.Trim(),
-                OrigenLat = dto.OrigenLat!.Value,
-                OrigenLng = dto.OrigenLng!.Value,
-                DestinoDir = dto.DestinoDir.Trim(),
-                DestinoLat = dto.DestinoLat!.Value,
-                DestinoLng = dto.DestinoLng!.Value,
-                HoraSalida = dto.HoraSalida!.Value,
-                HoraLlegada = dto.HoraLlegada!.Value,
-                MaxPaquetes = dto.MaxPaquetes!.Value,
-                PesoMaxKg = dto.PesoMaxKg!.Value,
-                DesvioMaxKm = dto.DesvioMaxKm!.Value,
-                // TODO Servicio de rutas: calcular distancia y duración de la ruta habitual (con paradas).
-                DistanciaKm = 0,
-                DuracionMin = 0,
                 Activo = true,
-                Dias = dto.Dias.Distinct().Select(d => new ViajeDia { DiaSemana = d }).ToList(),
-                Paradas = dto.Paradas.Select((p, i) => new Parada
-                {
-                    Orden = i + 1,
-                    Direccion = p.Direccion.Trim(),
-                    Lat = p.Lat,
-                    Lng = p.Lng
-                }).ToList()
+                Dias = dto.Dias.Distinct().Select(d => new ViajeDia { DiaSemana = d }).ToList()
             };
+            AplicarDatos(viaje, dto);
 
             await _repositorio.AgregarAsync(viaje);
 
             return ADto(viaje);
+        }
+
+        // Mismas validaciones que CrearAsync (Data Annotations de CrearViajeDto).
+        public async Task<ResultadoOperacion> ActualizarAsync(int usuarioId, int id, CrearViajeDto dto)
+        {
+            var viaje = await _repositorio.ObtenerPorIdAsync(id);
+
+            if (viaje == null || viaje.UsuarioId != usuarioId)
+            {
+                return ResultadoOperacion.NoEncontrado;
+            }
+
+            // Cambiar ruta, días o capacidad dejaría inconsistentes las asignaciones en curso.
+            if (TieneEnviosPendientes(viaje))
+            {
+                return ResultadoOperacion.Conflicto;
+            }
+
+            AplicarDatos(viaje, dto);
+
+            // ViajeDia tiene clave (ViajeId, DiaSemana): borrar y volver a agregar el mismo día choca
+            // en el change tracker, por eso solo se quitan y agregan las diferencias.
+            var dias = dto.Dias.Distinct().ToList();
+            viaje.Dias.RemoveAll(d => !dias.Contains(d.DiaSemana));
+            viaje.Dias.AddRange(dias
+                .Where(d => viaje.Dias.All(existente => existente.DiaSemana != d))
+                .Select(d => new ViajeDia { DiaSemana = d }));
+
+            await _repositorio.GuardarCambiosAsync();
+
+            return ResultadoOperacion.Exito;
         }
 
         public Task<List<DireccionDto>> BuscarDireccionesAsync(string texto)
@@ -82,6 +93,42 @@ namespace RuteaYa.API.Servicios
             return Task.FromResult(direcciones);
         }
 
+        // Datos del formulario comunes a crear y editar (los días se tratan aparte).
+        private static void AplicarDatos(Viaje viaje, CrearViajeDto dto)
+        {
+            viaje.OrigenDir = dto.OrigenDir.Trim();
+            viaje.OrigenLat = dto.OrigenLat!.Value;
+            viaje.OrigenLng = dto.OrigenLng!.Value;
+            viaje.DestinoDir = dto.DestinoDir.Trim();
+            viaje.DestinoLat = dto.DestinoLat!.Value;
+            viaje.DestinoLng = dto.DestinoLng!.Value;
+            viaje.HoraSalida = dto.HoraSalida!.Value;
+            viaje.HoraLlegada = dto.HoraLlegada!.Value;
+            viaje.MaxPaquetes = dto.MaxPaquetes!.Value;
+            viaje.PesoMaxKg = dto.PesoMaxKg!.Value;
+            viaje.DesvioMaxKm = dto.DesvioMaxKm!.Value;
+            // TODO Servicio de rutas: calcular distancia y duración de la ruta habitual (con paradas).
+            viaje.DistanciaKm = 0;
+            viaje.DuracionMin = 0;
+
+            // Las paradas que se quitan de la colección las borra EF (FK obligatoria con cascada).
+            viaje.Paradas.Clear();
+            viaje.Paradas.AddRange(dto.Paradas.Select((p, i) => new Parada
+            {
+                Orden = i + 1,
+                Direccion = p.Direccion.Trim(),
+                Lat = p.Lat,
+                Lng = p.Lng
+            }));
+        }
+
+        private static bool TieneEnviosPendientes(Viaje viaje)
+        {
+            return viaje.Asignaciones.Any(a => a.Envio.Estado == EstadoEnvio.ConductorAsignado
+                || a.Envio.Estado == EstadoEnvio.Retirado
+                || a.Envio.Estado == EstadoEnvio.EnCamino);
+        }
+
         private static ViajeDto ADto(Viaje viaje)
         {
             return CompletarDatos(viaje, new ViajeDto());
@@ -90,6 +137,11 @@ namespace RuteaYa.API.Servicios
         private static ViajeDetalleDto ADetalleDto(Viaje viaje)
         {
             var dto = CompletarDatos(viaje, new ViajeDetalleDto());
+            dto.OrigenLat = viaje.OrigenLat;
+            dto.OrigenLng = viaje.OrigenLng;
+            dto.DestinoLat = viaje.DestinoLat;
+            dto.DestinoLng = viaje.DestinoLng;
+            dto.TieneEnviosPendientes = TieneEnviosPendientes(viaje);
 
             dto.Paradas = viaje.Paradas
                 .OrderBy(p => p.Orden)

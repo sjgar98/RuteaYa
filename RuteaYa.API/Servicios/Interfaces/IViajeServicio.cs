@@ -8,6 +8,8 @@ namespace RuteaYa.API.Servicios.Interfaces
         // null si el viaje no existe o no es del usuario.
         Task<ViajeDetalleDto?> ObtenerDetalleAsync(int usuarioId, int id);
         Task<ViajeDto> CrearAsync(int usuarioId, CrearViajeDto dto);
+        // NoEncontrado si no existe o no es del usuario; Conflicto si tiene envíos pendientes.
+        Task<ResultadoOperacion> ActualizarAsync(int usuarioId, int id, CrearViajeDto dto);
         Task<List<DireccionDto>> BuscarDireccionesAsync(string texto);
     }
 }
