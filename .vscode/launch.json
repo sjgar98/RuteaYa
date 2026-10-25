@@ -1,0 +1,76 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "API",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/RuteaYa.API/bin/Debug/net10.0/RuteaYa.API.dll",
+      "cwd": "${workspaceFolder}/RuteaYa.API",
+      "launchSettingsProfile": "http",
+      "console": "internalConsole",
+      // LocalDB no existe en Linux: las variables RUTEAYA_DB_* se toman de .env (ver .env.example). Solo aplica en Linux.
+      "linux": {
+        "envFile": "${workspaceFolder}/.env"
+      },
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+        "uriFormat": "%s/swagger"
+      }
+    },
+    {
+      "name": "MVC",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/RuteaYa.MVC/bin/Debug/net10.0/RuteaYa.MVC.dll",
+      "cwd": "${workspaceFolder}/RuteaYa.MVC",
+      "launchSettingsProfile": "http",
+      "console": "internalConsole",
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+      }
+    },
+    // Copias sin preLaunchTask para el compound: la solucion se compila una sola vez
+    // antes de lanzar ambos, en vez de dos builds en paralelo que pisan los mismos bin/obj.
+    {
+      "name": "API (compound)",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/RuteaYa.API/bin/Debug/net10.0/RuteaYa.API.dll",
+      "cwd": "${workspaceFolder}/RuteaYa.API",
+      "launchSettingsProfile": "http",
+      "console": "internalConsole",
+      // LocalDB no existe en Linux: las variables RUTEAYA_DB_* se toman de .env (ver .env.example). Solo aplica en Linux.
+      "linux": {
+        "envFile": "${workspaceFolder}/.env"
+      },
+      "presentation": { "hidden": true }
+    },
+    {
+      "name": "MVC (compound)",
+      "type": "coreclr",
+      "request": "launch",
+      "program": "${workspaceFolder}/RuteaYa.MVC/bin/Debug/net10.0/RuteaYa.MVC.dll",
+      "cwd": "${workspaceFolder}/RuteaYa.MVC",
+      "launchSettingsProfile": "http",
+      "console": "internalConsole",
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+      },
+      "presentation": { "hidden": true }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "MVC + API",
+      "configurations": ["API (compound)", "MVC (compound)"],
+      "preLaunchTask": "build",
+      "stopAll": true
+    }
+  ]
+}

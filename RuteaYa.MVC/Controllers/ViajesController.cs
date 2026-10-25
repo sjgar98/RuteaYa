@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using RuteaYa.DTOs;
 using RuteaYa.MVC.Models;
 using RuteaYa.MVC.Servicios.Interfaces;
 
@@ -25,6 +26,50 @@ namespace RuteaYa.MVC.Controllers
             };
 
             return View(modelo);
+        }
+
+        public IActionResult Nuevo()
+        {
+            return View(new CrearViajeDto());
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Nuevo(CrearViajeDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(dto);
+            }
+
+            var errores = await _viajeServicio.CrearAsync(dto);
+            if (errores.Count > 0)
+            {
+                foreach (var (campo, mensajes) in errores)
+                {
+                    foreach (var mensaje in mensajes)
+                    {
+                        ModelState.AddModelError(campo, mensaje);
+                    }
+                }
+
+                return View(dto);
+            }
+
+            // Mis viajes lo muestra como toast.
+            TempData["MensajeExito"] = "El viaje se guardó correctamente.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // Autocompletado de origen, destino y paradas (lo llama la vista Nuevo con fetch).
+        public async Task<IActionResult> BuscarDirecciones(string texto)
+        {
+            if (string.IsNullOrWhiteSpace(texto) || texto.Trim().Length < 3)
+            {
+                return Json(new List<DireccionDto>());
+            }
+
+            return Json(await _viajeServicio.BuscarDireccionesAsync(texto.Trim()));
         }
     }
 }

@@ -1,0 +1,72 @@
+name: Integracion Continua
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          # Contraseña de un contenedor efímero que solo existe durante el job.
+          MSSQL_SA_PASSWORD: RuteaYa_CI_2026!
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 20s
+
+    env:
+      RUTEAYA_DB_HOST: localhost
+      RUTEAYA_DB_PORT: 1433
+      RUTEAYA_DB_NAME: RuteaYa
+      RUTEAYA_DB_USER: sa
+      RUTEAYA_DB_PASSWORD: RuteaYa_CI_2026!
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Restore
+        run: dotnet restore RuteaYa.slnx
+
+      - name: Build
+        run: dotnet build RuteaYa.slnx --no-restore --configuration Release
+
+      - name: Instalar dotnet-ef
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.0.13
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Aplicar migraciones
+        run: dotnet ef database update --project RuteaYa.Entidades --no-build --configuration Release
+
+      - name: Test
+        run: dotnet test RuteaYa.slnx --no-build --configuration Release --logger "trx;LogFileName=resultados.trx" --results-directory TestResults
+
+      - name: Subir resultados de tests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-tests
+          path: TestResults
