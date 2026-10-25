@@ -75,8 +75,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-app.UseHttpsRedirection();
+else
+{
+    // En desarrollo el MVC llama por http (ApiUrl de appsettings.Development.json). Si la API lo
+    // redirigiera a https, HttpClient seguiría la redirección sin el header Authorization y daría 401.
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();

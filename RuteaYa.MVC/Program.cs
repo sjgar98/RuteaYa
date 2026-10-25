@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using RuteaYa.MVC.Filtros;
 using RuteaYa.MVC.Servicios;
 using RuteaYa.MVC.Servicios.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options => options.Filters.Add<SesionVencidaFilter>());
 
 // Servicios del MVC (carpeta Servicios): wrappers HTTP que llaman a la API.
 // Cada uno se registra como HttpClient tipado con TokenHandler para enviar el JWT del usuario.
