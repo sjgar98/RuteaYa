@@ -16,22 +16,27 @@ namespace RuteaYa.API.Servicios
             _repositorio = repositorio;
         }
 
-        public Task<List<ViajeDto>> ListarPorUsuarioAsync(int usuarioId, bool? activo)
+        public async Task<List<ViajeDto>> ListarPorUsuarioAsync(int usuarioId, bool? activo)
         {
-            // TODO Datos de prueba: reemplazar por la consulta al repositorio cuando haya datos reales
-            // (y marcar el método como async).
-            // var viajes = await _repositorio.ListarPorUsuarioAsync(usuarioId, activo);
-            // return viajes.Select(ADto).ToList();
+            var viajes = await _repositorio.ListarPorUsuarioAsync(usuarioId, activo);
+            return viajes.Select(ADto).ToList();
+        }
 
-            var viajes = ViajesDePrueba()
-                .Where(v => !activo.HasValue || v.Activo == activo.Value)
-                .ToList();
+        public async Task<ViajeDetalleDto?> ObtenerDetalleAsync(int usuarioId, int id)
+        {
+            var viaje = await _repositorio.ObtenerPorIdAsync(id);
 
-            return Task.FromResult(viajes);
+            // Un viaje ajeno se trata como inexistente para no revelar que existe.
+            if (viaje == null || viaje.UsuarioId != usuarioId)
+            {
+                return null;
+            }
+
+            return ADetalleDto(viaje);
         }
 
         // Las validaciones de los datos están en las Data Annotations de CrearViajeDto.
-        public Task<ViajeDto> CrearAsync(int usuarioId, CrearViajeDto dto)
+        public async Task<ViajeDto> CrearAsync(int usuarioId, CrearViajeDto dto)
         {
             var viaje = new Viaje
             {
@@ -61,10 +66,9 @@ namespace RuteaYa.API.Servicios
                 }).ToList()
             };
 
-            // TODO Datos de prueba: persistir cuando haya usuarios cargados en la base (y marcar el método como async).
-            // await _repositorio.AgregarAsync(viaje);
+            await _repositorio.AgregarAsync(viaje);
 
-            return Task.FromResult(ADto(viaje));
+            return ADto(viaje);
         }
 
         public Task<List<DireccionDto>> BuscarDireccionesAsync(string texto)
@@ -80,71 +84,52 @@ namespace RuteaYa.API.Servicios
 
         private static ViajeDto ADto(Viaje viaje)
         {
-            return new ViajeDto
-            {
-                Id = viaje.Id,
-                OrigenDir = viaje.OrigenDir,
-                DestinoDir = viaje.DestinoDir,
-                Dias = viaje.Dias.Select(d => d.DiaSemana).OrderBy(d => d).ToList(),
-                HoraSalida = viaje.HoraSalida,
-                HoraLlegada = viaje.HoraLlegada,
-                MaxPaquetes = viaje.MaxPaquetes,
-                PesoMaxKg = viaje.PesoMaxKg,
-                DesvioMaxKm = viaje.DesvioMaxKm,
-                DistanciaKm = viaje.DistanciaKm,
-                DuracionMin = viaje.DuracionMin,
-                Activo = viaje.Activo
-            };
+            return CompletarDatos(viaje, new ViajeDto());
         }
 
-        private static List<ViajeDto> ViajesDePrueba()
+        private static ViajeDetalleDto ADetalleDto(Viaje viaje)
         {
-            return new List<ViajeDto>
+            var dto = CompletarDatos(viaje, new ViajeDetalleDto());
+
+            dto.Paradas = viaje.Paradas
+                .OrderBy(p => p.Orden)
+                .Select(p => new DireccionDto { Direccion = p.Direccion, Lat = p.Lat, Lng = p.Lng })
+                .ToList();
+
+            // TODO Paquetes asignados: mapear viaje.Asignaciones (con su Envio) cuando existan envíos y asignaciones.
+            dto.PaquetesAsignados = PaquetesDePrueba();
+
+            return dto;
+        }
+
+        private static T CompletarDatos<T>(Viaje viaje, T dto) where T : ViajeDto
+        {
+            dto.Id = viaje.Id;
+            dto.OrigenDir = viaje.OrigenDir;
+            dto.DestinoDir = viaje.DestinoDir;
+            dto.Dias = viaje.Dias.Select(d => d.DiaSemana).OrderBy(d => d).ToList();
+            dto.HoraSalida = viaje.HoraSalida;
+            dto.HoraLlegada = viaje.HoraLlegada;
+            dto.MaxPaquetes = viaje.MaxPaquetes;
+            dto.PesoMaxKg = viaje.PesoMaxKg;
+            dto.DesvioMaxKm = viaje.DesvioMaxKm;
+            dto.DistanciaKm = viaje.DistanciaKm;
+            dto.DuracionMin = viaje.DuracionMin;
+            dto.Activo = viaje.Activo;
+            return dto;
+        }
+
+        private static List<PaqueteAsignadoDto> PaquetesDePrueba()
+        {
+            return new List<PaqueteAsignadoDto>
             {
-                new ViajeDto
+                new PaqueteAsignadoDto
                 {
-                    Id = 1,
-                    OrigenDir = "Belgrano",
-                    DestinoDir = "Lomas de Zamora",
-                    Dias = new List<DiaSemana> { DiaSemana.Lunes, DiaSemana.Miercoles, DiaSemana.Viernes },
-                    HoraSalida = new TimeOnly(8, 0),
-                    HoraLlegada = new TimeOnly(8, 55),
-                    MaxPaquetes = 3,
-                    PesoMaxKg = 10,
-                    DesvioMaxKm = 5,
-                    DistanciaKm = 18.4m,
-                    DuracionMin = 55,
-                    Activo = true
-                },
-                new ViajeDto
-                {
-                    Id = 2,
-                    OrigenDir = "Palermo",
-                    DestinoDir = "San Isidro",
-                    Dias = new List<DiaSemana> { DiaSemana.Viernes },
-                    HoraSalida = new TimeOnly(18, 30),
-                    HoraLlegada = new TimeOnly(19, 20),
-                    MaxPaquetes = 2,
-                    PesoMaxKg = 8,
-                    DesvioMaxKm = 3,
-                    DistanciaKm = 21.7m,
-                    DuracionMin = 50,
-                    Activo = true
-                },
-                new ViajeDto
-                {
-                    Id = 3,
-                    OrigenDir = "Caballito",
-                    DestinoDir = "Quilmes",
-                    Dias = new List<DiaSemana> { DiaSemana.Martes, DiaSemana.Jueves },
-                    HoraSalida = new TimeOnly(7, 15),
-                    HoraLlegada = new TimeOnly(8, 10),
-                    MaxPaquetes = 4,
-                    PesoMaxKg = 15,
-                    DesvioMaxKm = 4,
-                    DistanciaKm = 24.1m,
-                    DuracionMin = 55,
-                    Activo = false
+                    EnvioId = 1,
+                    Descripcion = "Zapatillas",
+                    Estado = EstadoEnvio.Retirado,
+                    FechaLimite = new DateOnly(2026, 11, 20),
+                    Ganancia = 4000m
                 }
             };
         }

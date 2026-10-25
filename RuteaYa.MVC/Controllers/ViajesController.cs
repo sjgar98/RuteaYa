@@ -28,6 +28,17 @@ namespace RuteaYa.MVC.Controllers
             return View(modelo);
         }
 
+        public async Task<IActionResult> Detalle(int id)
+        {
+            var viaje = await _viajeServicio.ObtenerDetalleAsync(id);
+            if (viaje == null)
+            {
+                return NotFound();
+            }
+
+            return View(viaje);
+        }
+
         public IActionResult Nuevo()
         {
             return View(new CrearViajeDto());

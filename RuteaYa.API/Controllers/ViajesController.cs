@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using RuteaYa.API.Servicios.Interfaces;
 using RuteaYa.DTOs;
+using RuteaYa.Entidades;
 
 namespace RuteaYa.API.Controllers
 {
@@ -25,12 +26,36 @@ namespace RuteaYa.API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<List<ViajeDto>>> Listar([FromQuery] bool? activo)
         {
-            // TODO Autenticación: tomar el usuario del token y quitar el valor fijo.
+            // TODO Autenticación: tomar el usuario del token y quitar el usuario de prueba
+            // (requiere using System.Security.Claims).
             // var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var usuarioId = 1;
+            var usuarioId = UsuarioPrueba.Id;
 
             var viajes = await _viajeServicio.ListarPorUsuarioAsync(usuarioId, activo);
             return Ok(viajes);
+        }
+
+        /// <summary>Obtiene el detalle de un viaje del usuario autenticado, con sus paradas y paquetes asignados.</summary>
+        /// <response code="200">Detalle del viaje.</response>
+        /// <response code="404">El viaje no existe o pertenece a otro usuario.</response>
+        [HttpGet("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<ViajeDetalleDto>> Obtener(int id)
+        {
+            // TODO Autenticación: tomar el usuario del token y quitar el usuario de prueba
+            // (requiere using System.Security.Claims).
+            // var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var usuarioId = UsuarioPrueba.Id;
+
+            var viaje = await _viajeServicio.ObtenerDetalleAsync(usuarioId, id);
+            if (viaje == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(viaje);
         }
 
         /// <summary>Registra un viaje habitual del usuario autenticado.</summary>
@@ -42,13 +67,14 @@ namespace RuteaYa.API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<ViajeDto>> Crear([FromBody] CrearViajeDto dto)
         {
-            // TODO Autenticación: tomar el usuario del token y quitar el valor fijo.
-            var usuarioId = 1;
+            // TODO Autenticación: tomar el usuario del token y quitar el usuario de prueba
+            // (requiere using System.Security.Claims).
+            // var usuarioId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var usuarioId = UsuarioPrueba.Id;
 
             var viaje = await _viajeServicio.CrearAsync(usuarioId, dto);
 
-            // TODO Detalle del viaje: usar CreatedAtAction cuando exista GET api/viajes/{id}.
-            return StatusCode(StatusCodes.Status201Created, viaje);
+            return CreatedAtAction(nameof(Obtener), new { id = viaje.Id }, viaje);
         }
 
         /// <summary>Busca direcciones que coincidan con el texto (origen, destino o paradas).</summary>

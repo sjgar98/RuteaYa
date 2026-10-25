@@ -22,6 +22,19 @@ namespace RuteaYa.MVC.Servicios
             return await _http.GetFromJsonAsync<List<ViajeDto>>(url) ?? new List<ViajeDto>();
         }
 
+        public async Task<ViajeDetalleDto?> ObtenerDetalleAsync(int id)
+        {
+            var respuesta = await _http.GetAsync($"api/viajes/{id}");
+
+            if (respuesta.StatusCode == HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+
+            respuesta.EnsureSuccessStatusCode();
+            return await respuesta.Content.ReadFromJsonAsync<ViajeDetalleDto>();
+        }
+
         public async Task<Dictionary<string, string[]>> CrearAsync(CrearViajeDto dto)
         {
             var respuesta = await _http.PostAsJsonAsync("api/viajes", dto);
