@@ -1,22 +1,15 @@
 using RuteaYa.Entidades;
-using RuteaYa.Entidades.Enums;
+using RuteaYa.DTOs.Enums;
 
 namespace RuteaYa.Repositorios.Interfaces
 {
-    public interface IEnvioRepositorio : IRepositorio<Envio>
+    public interface IEnvioRepositorio
     {
-        /// <param name="estado">null devuelve los envíos en cualquier estado.</param>
-        Task<List<Envio>> ObtenerPorUsuarioAsync(int usuarioId, EstadoEnvio? estado = null);
-
-        /// <summary>Envío con su asignación (y viaje asociado) e historial de estados.</summary>
-        Task<Envio?> ObtenerConDetalleAsync(int id);
-
-        /// <summary>
-        /// Envíos en estado "Buscando conductor" cuya fecha límite no es anterior a <paramref name="desde"/>.
-        /// Excluye los publicados por <paramref name="excluirUsuarioId"/> (el propio conductor).
-        /// </summary>
-        Task<List<Envio>> ObtenerDisponiblesAsync(DateOnly desde, int? excluirUsuarioId = null);
-
-        Task<List<Envio>> ObtenerPorIdsAsync(IEnumerable<int> ids);
+        Task<List<Envio>> ListarPorUsuarioAsync(int usuarioId, EstadoEnvio? estado = null);
+        Task<List<Envio>> ListarDisponiblesAsync(DateOnly desde, int usuarioIdExcluido);
+        Task<List<Envio>> ListarPorIdsAsync(List<int> ids);
+        Task<Envio?> ObtenerPorIdAsync(int id);
+        Task AgregarAsync(Envio envio);
+        Task GuardarCambiosAsync();
     }
 }

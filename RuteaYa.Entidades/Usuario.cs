@@ -9,7 +9,7 @@ namespace RuteaYa.Entidades
         public string PasswordHash { get; set; } = string.Empty;
         public DateTime CreadoEn { get; set; }
 
-        public ICollection<Viaje> Viajes { get; set; } = new List<Viaje>();
-        public ICollection<Envio> Envios { get; set; } = new List<Envio>();
+        public List<Viaje> Viajes { get; set; } = new List<Viaje>();
+        public List<Envio> Envios { get; set; } = new List<Envio>();
     }
 }

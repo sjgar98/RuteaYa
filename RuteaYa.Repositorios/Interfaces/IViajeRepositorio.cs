@@ -2,15 +2,11 @@ using RuteaYa.Entidades;
 
 namespace RuteaYa.Repositorios.Interfaces
 {
-    public interface IViajeRepositorio : IRepositorio<Viaje>
+    public interface IViajeRepositorio
     {
-        /// <param name="activo">null devuelve todos (activos e inactivos).</param>
-        Task<List<Viaje>> ObtenerPorUsuarioAsync(int usuarioId, bool? activo = null);
-
-        /// <summary>Viaje con paradas (ordenadas), días y asignaciones con su envío.</summary>
-        Task<Viaje?> ObtenerConDetalleAsync(int id);
-
-        /// <summary>Devuelve el viaje con detalle solo si pertenece al usuario.</summary>
-        Task<Viaje?> ObtenerDeUsuarioAsync(int id, int usuarioId);
+        Task<List<Viaje>> ListarPorUsuarioAsync(int usuarioId, bool? activo = null);
+        Task<Viaje?> ObtenerPorIdAsync(int id);
+        Task AgregarAsync(Viaje viaje);
+        Task GuardarCambiosAsync();
     }
 }

@@ -1,7 +1,8 @@
 <Solution>
+  <Project Path="RuteaYa.API/RuteaYa.API.csproj" />
+  <Project Path="RuteaYa.DTOs/RuteaYa.DTOs.csproj" />
   <Project Path="RuteaYa.Entidades/RuteaYa.Entidades.csproj" />
   <Project Path="RuteaYa.Repositorios/RuteaYa.Repositorios.csproj" />
-  <Project Path="RuteaYa.Servicios/RuteaYa.Servicios.csproj" />
   <Project Path="RuteaYa.Tests/RuteaYa.Tests.csproj" />
   <Project Path="RuteaYa.MVC/RuteaYa.MVC.csproj" />
 </Solution>

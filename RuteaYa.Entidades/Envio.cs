@@ -1,4 +1,4 @@
-using RuteaYa.Entidades.Enums;
+using RuteaYa.DTOs.Enums;
 
 namespace RuteaYa.Entidades
 {
@@ -23,11 +23,8 @@ namespace RuteaYa.Entidades
         public EstadoEnvio Estado { get; set; } = EstadoEnvio.BuscandoConductor;
         public DateTime CreadoEn { get; set; }
 
-        // Token de concurrencia: evita que dos conductores tomen el mismo envío a la vez.
-        public byte[] RowVersion { get; set; } = null!;
-
         public Usuario Usuario { get; set; } = null!;
         public Asignacion? Asignacion { get; set; }
-        public ICollection<EnvioEstadoHistorial> Historial { get; set; } = new List<EnvioEstadoHistorial>();
+        public List<EnvioEstadoHistorial> Historial { get; set; } = new List<EnvioEstadoHistorial>();
     }
 }

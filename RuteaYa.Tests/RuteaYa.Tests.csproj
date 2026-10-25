@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -21,7 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\RuteaYa.Entidades\RuteaYa.Entidades.csproj" />
     <ProjectReference Include="..\RuteaYa.Repositorios\RuteaYa.Repositorios.csproj" />
-    <ProjectReference Include="..\RuteaYa.Servicios\RuteaYa.Servicios.csproj" />
+    <ProjectReference Include="..\RuteaYa.API\RuteaYa.API.csproj" />
     <ProjectReference Include="..\RuteaYa.MVC\RuteaYa.MVC.csproj" />
   </ItemGroup>
 

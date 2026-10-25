@@ -27,8 +27,8 @@ namespace RuteaYa.Entidades
         public bool Activo { get; set; } = true;
 
         public Usuario Usuario { get; set; } = null!;
-        public ICollection<Parada> Paradas { get; set; } = new List<Parada>();
-        public ICollection<ViajeDia> Dias { get; set; } = new List<ViajeDia>();
-        public ICollection<Asignacion> Asignaciones { get; set; } = new List<Asignacion>();
+        public List<Parada> Paradas { get; set; } = new List<Parada>();
+        public List<ViajeDia> Dias { get; set; } = new List<ViajeDia>();
+        public List<Asignacion> Asignaciones { get; set; } = new List<Asignacion>();
     }
 }

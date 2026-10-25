@@ -1,4 +1,4 @@
-using RuteaYa.Entidades.Enums;
+using RuteaYa.DTOs.Enums;
 
 namespace RuteaYa.Entidades
 {

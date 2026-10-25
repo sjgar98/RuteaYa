@@ -29,3 +29,10 @@ body {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
+
+/* Mis viajes */
+.badge-activo {
+  background-color: #dcf5e7;
+  color: #1e7a4c;
+  font-weight: 500;
+}

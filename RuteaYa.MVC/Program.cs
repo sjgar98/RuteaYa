@@ -1,13 +1,23 @@
-using Microsoft.EntityFrameworkCore;
-using RuteaYa.Repositorios;
+using RuteaYa.MVC.Servicios;
+using RuteaYa.MVC.Servicios.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddDbContext<RuteaYaDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Servicios del MVC (carpeta Servicios): wrappers HTTP que llaman a la API.
+// Cada uno se registra como HttpClient tipado con TokenHandler para enviar el JWT del usuario.
+var apiUrl = new Uri(builder.Configuration["ApiUrl"]!);
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<TokenHandler>();
+
+builder.Services.AddHttpClient<IViajeServicio, ViajeServicio>(c => c.BaseAddress = apiUrl)
+    .AddHttpMessageHandler<TokenHandler>();
+
+// TODO Autenticación: cookie del MVC. El login guarda en ella el JWT de la API como claim "token".
+// builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+//     .AddCookie(options => options.LoginPath = "/Cuenta/Login");
 
 var app = builder.Build();
 
@@ -22,6 +32,8 @@ app.UseHttpsRedirection();
 
 app.UseRouting();
 
+// TODO Autenticación: descomentar junto con AddAuthentication.
+// app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
