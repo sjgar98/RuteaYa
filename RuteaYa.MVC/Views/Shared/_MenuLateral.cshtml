@@ -1,0 +1,29 @@
+@{
+    var secciones = new (string Texto, string Controller)[]
+    {
+        ("Inicio", "Home"),
+        ("Mis viajes", "Viajes"),
+        ("Mis envíos", "Envios"),
+        ("Oportunidades", "Oportunidades"),
+        ("Optimizador", "Optimizador"),
+        ("Mis transportes", "Transportes"),
+        ("Historial", "Historial"),
+        ("Potencial mensual", "Potencial")
+    };
+
+    var controllerActual = ViewContext.RouteData.Values["controller"] as string;
+}
+
+<nav aria-label="Menú principal">
+    <ul class="nav flex-column gap-1">
+        @foreach (var seccion in secciones)
+        {
+            var activa = string.Equals(seccion.Controller, controllerActual, StringComparison.OrdinalIgnoreCase);
+            <li class="nav-item">
+                @* URL armada a mano: asp-controller deja el href vacío si el controller todavía no existe. *@
+                <a class="app-menu-link @(activa ? "active" : null)" href="@Url.Content($"~/{seccion.Controller}")"
+                   aria-current="@(activa ? "page" : null)">@seccion.Texto</a>
+            </li>
+        }
+    </ul>
+</nav>
