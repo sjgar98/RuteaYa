@@ -45,6 +45,7 @@ builder.Services.AddScoped<IViajeServicio, ViajeServicio>();
 builder.Services.AddScoped<IUsuarioServicio, UsuarioServicio>();
 builder.Services.AddScoped<ITokenServicio, TokenServicio>();
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
+builder.Services.AddScoped<IRutaServicio, RutaServicioMock>();
 
 builder.Services.AddDbContext<RuteaYaDbContext>();
 
