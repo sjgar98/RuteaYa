@@ -11,6 +11,11 @@ renombrar o eliminar funcionalidades (sobre todo la sección 5, "Estado por func
 Es la única fuente de contexto para agentes: `CLAUDE.md` solo lo importa (`@AGENTS.md`), así que
 los cambios se hacen acá y no en `CLAUDE.md`.
 
+**Enunciado completo:** `docs/enunciado.md` (transcripción del PDF de la cátedra con definiciones,
+reglas y requisitos por pantalla). **Mockups:** `docs/mockups/Pantalla N - <Nombre>.png`, referenciados
+desde cada pantalla del enunciado (cada uno con una descripción en texto de lo que muestra). Este archivo
+es un resumen: ante dudas sobre el alcance, consultar el enunciado.
+
 ---
 
 ## 1. Stack y comandos
@@ -189,6 +194,8 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 
 ## 7. Requisitos del enunciado (resumen fiel)
 
+Fuente completa: `docs/enunciado.md` (y mockups en `docs/mockups/`).
+
 ### 7.1 Usuarios
 Registro: Nombre y Apellido no vacíos, Email formato válido y **único**, Contraseña con longitud mínima
 (y requisitos que defina el grupo), Confirmación igual a la contraseña. Login: Email + Contraseña;
@@ -308,6 +315,7 @@ migración). Buscar referencias con `grep -rn "<Nombre>" --include=*.cs --includ
 incluidos enlaces `asp-action`/`asp-controller` en otras vistas, y actualizar la sección 5.
 
 ### 8.4 Datos de ejemplo de los mockups (útiles para seed y tests)
+Salen de `docs/mockups/` (descritos en texto en `docs/enunciado.md`, sección 6).
 Usuario "Juan Pérez". Viajes: Belgrano → Lomas de Zamora (Lun, Mié, Vie 08:00–08:55, 3 paquetes, 10 kg,
 5 km, 18,4 km / 55 min); Palermo → San Isidro (Vie 18:30–19:20). Envíos: Plaza Italia → Obelisco
 (Zapatillas $4.000), Recoleta → Quilmes (Documentos $3.500/$5.500), Avellaneda → Palermo (Repuesto $2.500,
