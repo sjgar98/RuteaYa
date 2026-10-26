@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RuteaYa.API.Extensiones;
+using RuteaYa.API.Servicios;
 using RuteaYa.API.Servicios.Interfaces;
 using RuteaYa.DTOs;
 
@@ -66,6 +67,32 @@ namespace RuteaYa.API.Controllers
             var viaje = await _viajeServicio.CrearAsync(usuarioId, dto);
 
             return CreatedAtAction(nameof(Obtener), new { id = viaje.Id }, viaje);
+        }
+
+        /// <summary>Modifica un viaje del usuario autenticado (mismos datos y validaciones que al crearlo; las paradas se reemplazan).</summary>
+        /// <response code="204">Viaje actualizado.</response>
+        /// <response code="400">Datos inválidos.</response>
+        /// <response code="404">El viaje no existe o pertenece a otro usuario.</response>
+        /// <response code="409">El viaje tiene envíos pendientes (asignados, retirados o en camino).</response>
+        [HttpPut("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> Actualizar(int id, [FromBody] CrearViajeDto dto)
+        {
+            var usuarioId = User.ObtenerUsuarioId();
+
+            var resultado = await _viajeServicio.ActualizarAsync(usuarioId, id, dto);
+
+            return resultado switch
+            {
+                ResultadoOperacion.NoEncontrado => NotFound(),
+                ResultadoOperacion.Conflicto => Problem(statusCode: StatusCodes.Status409Conflict,
+                    title: "El viaje tiene envíos pendientes y no se puede editar."),
+                _ => NoContent()
+            };
         }
 
         /// <summary>Busca direcciones que coincidan con el texto (origen, destino o paradas).</summary>

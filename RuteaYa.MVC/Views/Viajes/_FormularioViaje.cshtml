@@ -1,0 +1,135 @@
+@using System.Globalization
+@using RuteaYa.DTOs.Enums
+@model RuteaYa.DTOs.CrearViajeDto
+@{
+    // Formulario compartido por Nuevo y Editar. Editar pasa el id del viaje; Nuevo no.
+    var idViaje = ViewData["IdViaje"] as int?;
+    var accion = idViaje.HasValue ? "Editar" : "Nuevo";
+
+    var dias = new (DiaSemana Dia, string Letra, string Nombre)[]
+    {
+        (DiaSemana.Lunes, "L", "Lunes"),
+        (DiaSemana.Martes, "M", "Martes"),
+        (DiaSemana.Miercoles, "X", "Miércoles"),
+        (DiaSemana.Jueves, "J", "Jueves"),
+        (DiaSemana.Viernes, "V", "Viernes"),
+        (DiaSemana.Sabado, "S", "Sábado"),
+        (DiaSemana.Domingo, "D", "Domingo")
+    };
+
+    // Las coordenadas viajan con punto decimal; los campos __Invariant le indican al model binder
+    // que las lea así sin importar la cultura del servidor.
+    string Coordenada(decimal? valor) => valor?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+}
+
+<form asp-action="@accion" asp-route-id="@idViaje" method="post" id="form-viaje" class="card border-0 shadow-sm rounded-4"
+      data-url-direcciones="@Url.Action("BuscarDirecciones")">
+    <div class="card-body p-4">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger small"></div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="OrigenDir" class="form-label small fw-semibold">Origen</label>
+                <div class="autocompletar">
+                    <input asp-for="OrigenDir" class="form-control" placeholder="¿Desde dónde salís?" autocomplete="off"
+                           data-lat="#OrigenLat" data-lng="#OrigenLng" />
+                    <ul class="autocompletar-lista list-group shadow-sm d-none"></ul>
+                </div>
+                <input type="hidden" id="OrigenLat" name="OrigenLat" value="@Coordenada(Model.OrigenLat)" />
+                <input type="hidden" id="OrigenLng" name="OrigenLng" value="@Coordenada(Model.OrigenLng)" />
+                <input type="hidden" name="__Invariant" value="OrigenLat" />
+                <input type="hidden" name="__Invariant" value="OrigenLng" />
+                <span asp-validation-for="OrigenDir" class="text-danger small"></span>
+                <span asp-validation-for="OrigenLat" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="DestinoDir" class="form-label small fw-semibold">Destino</label>
+                <div class="autocompletar">
+                    <input asp-for="DestinoDir" class="form-control" placeholder="¿A dónde llegás?" autocomplete="off"
+                           data-lat="#DestinoLat" data-lng="#DestinoLng" />
+                    <ul class="autocompletar-lista list-group shadow-sm d-none"></ul>
+                </div>
+                <input type="hidden" id="DestinoLat" name="DestinoLat" value="@Coordenada(Model.DestinoLat)" />
+                <input type="hidden" id="DestinoLng" name="DestinoLng" value="@Coordenada(Model.DestinoLng)" />
+                <input type="hidden" name="__Invariant" value="DestinoLat" />
+                <input type="hidden" name="__Invariant" value="DestinoLng" />
+                <span asp-validation-for="DestinoDir" class="text-danger small"></span>
+                <span asp-validation-for="DestinoLat" class="text-danger small"></span>
+            </div>
+
+            <div class="col-12">
+                <label for="parada-busqueda" class="form-label small fw-semibold">Paradas intermedias (opcional)</label>
+                <div class="d-flex gap-2">
+                    <div class="autocompletar flex-grow-1">
+                        <input id="parada-busqueda" class="form-control" placeholder="Buscá una parada y agregala con +" autocomplete="off" />
+                        <ul class="autocompletar-lista list-group shadow-sm d-none"></ul>
+                    </div>
+                    <button type="button" id="parada-agregar" class="btn btn-outline-dark px-3" disabled
+                            title="Agregar parada" aria-label="Agregar parada">+</button>
+                </div>
+                <div id="parada-error" class="text-danger small"></div>
+                <ol id="paradas-lista" class="list-unstyled mt-2 mb-0"></ol>
+                <span asp-validation-for="Paradas" class="text-danger small"></span>
+                <script type="application/json" id="paradas-iniciales">@Json.Serialize(Model.Paradas)</script>
+            </div>
+
+            <div class="col-12">
+                <span class="form-label small fw-semibold d-block">Días de la semana</span>
+                <div class="d-flex flex-wrap gap-2" role="group" aria-label="Días de la semana">
+                    @foreach (var (dia, letra, nombre) in dias)
+                    {
+                        <input type="checkbox" class="btn-check" name="Dias" id="dia-@dia" value="@dia" autocomplete="off"
+                               checked="@Model.Dias.Contains(dia)"
+                               data-val="true" data-val-required="Seleccioná al menos un día." />
+                        <label class="btn btn-outline-dark rounded-circle dia-semana" for="dia-@dia" title="@nombre">@letra</label>
+                    }
+                </div>
+                <span asp-validation-for="Dias" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="HoraSalida" class="form-label small fw-semibold">Hora de salida</label>
+                <input asp-for="HoraSalida" type="time" asp-format="{0:HH:mm}" class="form-control" />
+                <span asp-validation-for="HoraSalida" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="HoraLlegada" class="form-label small fw-semibold">Hora de llegada</label>
+                <input asp-for="HoraLlegada" type="time" asp-format="{0:HH:mm}" class="form-control" />
+                <span asp-validation-for="HoraLlegada" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="MaxPaquetes" class="form-label small fw-semibold">Paquetes máximos</label>
+                <input asp-for="MaxPaquetes" class="form-control" placeholder="3" />
+                <span asp-validation-for="MaxPaquetes" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="PesoMaxKg" class="form-label small fw-semibold">Peso máximo (kg)</label>
+                <input asp-for="PesoMaxKg" type="number" step="any" class="form-control" placeholder="10" />
+                <span asp-validation-for="PesoMaxKg" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="DesvioMaxKm" class="form-label small fw-semibold">Desvío máximo (km)</label>
+                <input asp-for="DesvioMaxKm" type="number" step="any" class="form-control" placeholder="3" />
+                <span asp-validation-for="DesvioMaxKm" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+            @if (idViaje.HasValue)
+            {
+                <a class="btn btn-outline-secondary" asp-action="Detalle" asp-route-id="@idViaje">Cancelar</a>
+                <button type="submit" class="btn btn-dark">Guardar cambios</button>
+            }
+            else
+            {
+                <a class="btn btn-outline-secondary" asp-action="Index">Cancelar</a>
+                <button type="submit" class="btn btn-dark">Guardar viaje</button>
+            }
+        </div>
+    </div>
+</form>

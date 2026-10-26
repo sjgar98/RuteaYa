@@ -1,0 +1,24 @@
+@using System.Security.Claims
+@{
+    // Los claims los guarda CuentaController al iniciar sesión.
+    var nombre = User.Identity?.Name ?? string.Empty;
+    var email = User.FindFirstValue(ClaimTypes.Email);
+    var iniciales = string.Concat(nombre.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(p => char.ToUpper(p[0])));
+}
+
+<div class="dropup mt-auto pt-3 border-top">
+    <button type="button" class="app-usuario dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="app-avatar" aria-hidden="true">@iniciales</span>
+        <span class="app-usuario-texto">
+            <span class="d-block fw-semibold text-truncate">@nombre</span>
+            <span class="d-block text-muted small text-truncate">@email</span>
+        </span>
+    </button>
+    <ul class="dropdown-menu shadow-sm w-100">
+        <li>
+            <form asp-controller="Cuenta" asp-action="Logout" method="post">
+                <button type="submit" class="dropdown-item">Cerrar sesión</button>
+            </form>
+        </li>
+    </ul>
+</div>

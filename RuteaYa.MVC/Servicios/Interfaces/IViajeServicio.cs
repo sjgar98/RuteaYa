@@ -1,4 +1,5 @@
 using RuteaYa.DTOs;
+using RuteaYa.MVC.Models;
 
 namespace RuteaYa.MVC.Servicios.Interfaces
 {
@@ -11,6 +12,8 @@ namespace RuteaYa.MVC.Servicios.Interfaces
 
         // Devuelve los errores de validación de la API por campo (vacío si se creó).
         Task<Dictionary<string, string[]>> CrearAsync(CrearViajeDto dto);
+
+        Task<ResultadoEdicionViaje> ActualizarAsync(int id, CrearViajeDto dto);
 
         Task<List<DireccionDto>> BuscarDireccionesAsync(string texto);
     }

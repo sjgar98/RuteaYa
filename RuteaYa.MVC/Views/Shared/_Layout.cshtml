@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,45 +7,50 @@
     <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/RuteaYa.MVC.styles.css" asp-append-version="true" />
 </head>
-<body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">RuteaYa</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                    </ul>
-                    @* TODO Layout: pasar al menú del usuario del sidebar. *@
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted small">@User.Identity?.Name</span>
-                        <form asp-controller="Cuenta" asp-action="Logout" method="post" class="d-inline">
-                            <button type="submit" class="btn btn-outline-secondary btn-sm">Cerrar sesión</button>
-                        </form>
-                    </div>
+<body class="app-fondo">
+    <div class="app">
+        <aside class="offcanvas-lg offcanvas-start app-sidebar" id="menu-lateral" tabindex="-1" aria-labelledby="menu-lateral-titulo">
+            <div class="app-sidebar-contenido">
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <a class="app-marca" id="menu-lateral-titulo" asp-controller="Home" asp-action="Index">RuteaYa</a>
+                    <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#menu-lateral" aria-label="Cerrar menú"></button>
                 </div>
+
+                <partial name="_MenuLateral" />
+
+                <partial name="_MenuUsuario" />
             </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
+        </aside>
+
+        <div class="app-principal">
+            <header class="app-barra d-lg-none">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="offcanvas" data-bs-target="#menu-lateral" aria-controls="menu-lateral" aria-label="Abrir menú">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5" />
+                    </svg>
+                </button>
+                <a class="app-marca" asp-controller="Home" asp-action="Index">RuteaYa</a>
+            </header>
+
+            <main role="main" class="app-contenido">
+                @RenderBody()
+            </main>
+        </div>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - RuteaYa
+    @* Mensaje de éxito que deja una acción antes de redirigir (p. ej. guardar un viaje). *@
+    @if (TempData["MensajeExito"] is string mensajeExito)
+    {
+        <div class="toast-container position-fixed bottom-0 end-0 p-3">
+            <div id="toast-exito" class="toast align-items-center text-bg-success border-0" role="status" aria-live="polite" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">@mensajeExito</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+                </div>
+            </div>
         </div>
-    </footer>
+    }
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>

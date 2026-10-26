@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using RuteaYa.DTOs;
+using RuteaYa.MVC.Models;
 using RuteaYa.MVC.Servicios.Interfaces;
 
 namespace RuteaYa.MVC.Servicios
@@ -41,18 +42,43 @@ namespace RuteaYa.MVC.Servicios
 
             if (respuesta.StatusCode == HttpStatusCode.BadRequest)
             {
-                var problema = await respuesta.Content.ReadFromJsonAsync<ValidationProblemDetails>();
-                return new Dictionary<string, string[]>(problema?.Errors ?? new Dictionary<string, string[]>());
+                return await LeerErroresAsync(respuesta);
             }
 
             respuesta.EnsureSuccessStatusCode();
             return new Dictionary<string, string[]>();
         }
 
+        public async Task<ResultadoEdicionViaje> ActualizarAsync(int id, CrearViajeDto dto)
+        {
+            var respuesta = await _http.PutAsJsonAsync($"api/viajes/{id}", dto);
+
+            switch (respuesta.StatusCode)
+            {
+                case HttpStatusCode.BadRequest:
+                    return new ResultadoEdicionViaje { Errores = await LeerErroresAsync(respuesta) };
+                case HttpStatusCode.NotFound:
+                    return new ResultadoEdicionViaje { NoEncontrado = true };
+                case HttpStatusCode.Conflict:
+                    var problema = await respuesta.Content.ReadFromJsonAsync<ProblemDetails>();
+                    return new ResultadoEdicionViaje { Conflicto = problema?.Title ?? "No se pudo editar el viaje." };
+            }
+
+            respuesta.EnsureSuccessStatusCode();
+            return new ResultadoEdicionViaje();
+        }
+
         public async Task<List<DireccionDto>> BuscarDireccionesAsync(string texto)
         {
             var url = $"api/viajes/direcciones?texto={Uri.EscapeDataString(texto)}";
             return await _http.GetFromJsonAsync<List<DireccionDto>>(url) ?? new List<DireccionDto>();
+        }
+
+        // Errores por campo del ValidationProblemDetails que devuelve [ApiController] en un 400.
+        private static async Task<Dictionary<string, string[]>> LeerErroresAsync(HttpResponseMessage respuesta)
+        {
+            var problema = await respuesta.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+            return new Dictionary<string, string[]>(problema?.Errors ?? new Dictionary<string, string[]>());
         }
     }
 }
