@@ -138,7 +138,7 @@ Repositorios existentes (métodos ya disponibles, muchos aún sin uso):
 - `IEnvioRepositorio`: `ListarPorUsuarioAsync(usuarioId, estado?)`, `ListarDisponiblesAsync(desde, usuarioIdExcluido)` (BuscandoConductor, no vencidos, de otros usuarios), `ListarPorIdsAsync`, `ObtenerPorIdAsync` (con Asignacion+Viaje e Historial), `AgregarAsync`, `GuardarCambiosAsync`.
 - `IAsignacionRepositorio`: `ListarPorConductorAsync`, `ObtenerPorIdAsync`, `AgregarAsync(List<Asignacion>)` (una o varias en un solo `SaveChanges`).
 
-Todos registrados como `Scoped` en `RuteaYa.API/Program.cs`. Servicios de la API: `IViajeServicio`, `IUsuarioServicio`, `ITokenServicio`.
+Todos registrados como `Scoped` en `RuteaYa.API/Program.cs`. Servicios de la API: `IViajeServicio`, `IUsuarioServicio`, `ITokenServicio`, `IRutaServicio` (mock actual: `RutaServicioMock`).
 
 ## 5. Estado por funcionalidad
 
@@ -161,7 +161,7 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 | 12 | Mis transportes | ❌ `GET api/transportes`, `POST api/transportes/{asignacionId}/estado` (o `/retirado`, `/en-camino`, `/entregado`) | ❌ | ❌ |
 | 13 | Historial | ❌ `GET api/historial?desde=&hasta=&estado=` | ❌ | ❌ |
 | 14 | Potencial mensual (req. para 10) | ❌ `GET api/potencial?mes=yyyy-MM&criterio=` (`ganancia`, `desvio` o `equilibrio`) | ❌ | ❌ |
-| — | Servicio de rutas/mapas | ❌ interfaz (p. ej. `IRutasServicio`) + impl. mock + impl. real opcional | — | ❌ |
+| — | Servicio de rutas/mapas | 🟡 `IRutaServicio` + `RutaServicioMock` + `RutasController` (`GET api/rutas/geocodificar`, `POST api/rutas/calcular`, `GET api/rutas/direcciones`, `GET api/rutas/oportunidad-detalle`) | — | 🟡 Mock implementado y registrado en DI; falta integrar este servicio al flujo de Viajes/Oportunidades y una impl. real por proveedor |
 | — | Layout con sidebar | — | ✅ `_Layout.cshtml` + `_MenuLateral.cshtml` (secciones → `/<Controller>`, activa según el controller actual) + `_MenuUsuario.cshtml` (nombre, email, Cerrar sesión). En celulares el menú es un offcanvas | ✅ Controllers esperados: `Envios`, `Oportunidades`, `Optimizador`, `Transportes`, `Historial`, `Potencial` (acción `Index`); si se usa otro nombre, cambiarlo en `_MenuLateral` |
 | — | Tests unitarios por endpoint | — | — | 🟡 `UsuarioServicio`, `ViajeServicio.ObtenerDetalleAsync` y `ActualizarAsync` |
 | — | README (cómo correr y configurar BD desde cero) | — | — | ❌ |
@@ -181,16 +181,15 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
   `TokenHandler` lo agrega como `Authorization: Bearer`. También hay `FallbackPolicy`: toda pantalla
   exige sesión salvo `CuentaController` y los archivos estáticos. Nombre del usuario en vistas: `User.Identity.Name`.
 
-### 6.2 Servicio de rutas / mapas (no implementado)
-- `ViajeServicio.BuscarDireccionesAsync` filtra una lista fija de 12 barrios de CABA/GBA
-  (`DireccionesDePrueba()`), sin distinguir tildes/mayúsculas.
+### 6.2 Servicio de rutas / mapas (parcial)
+- API: existe `IRutaServicio` con implementación `RutaServicioMock` registrada en DI y expuesta por
+  `RutasController` (`api/rutas/geocodificar`, `api/rutas/calcular`, `api/rutas/direcciones`,
+  `api/rutas/oportunidad-detalle`), usando datos simulados.
+- `ViajeServicio.BuscarDireccionesAsync` sigue filtrando una lista fija de 12 barrios de CABA/GBA
+  (`DireccionesDePrueba()`), sin distinguir tildes/mayúsculas (todavía no usa `IRutaServicio`).
 - `Viaje.DistanciaKm` / `DuracionMin` se guardan en 0.
-- Requisito: abstracción de servicio (la lógica no depende del proveedor), con **implementación mock
-  obligatoria** cuando no hay API key (p. ej. distancia Haversine × factor + velocidad promedio) y
-  opcionalmente una real (Google Maps, OSRM, etc.), elegida por configuración en `Program.cs`.
-  Debe: ruta origen→destino con paradas, distancia habitual, distancia con el envío
-  (origen viaje → … → origen envío → destino envío → … → destino viaje), desvío = diferencia, y tiempo adicional.
-  Mover ahí también la búsqueda de direcciones.
+- Pendiente: integrar `IRutaServicio` al flujo real de Viajes/Oportunidades y agregar una implementación
+  por proveedor (Google Maps, OSRM, etc.) seleccionable por configuración.
 
 ## 7. Requisitos del enunciado (resumen fiel)
 
