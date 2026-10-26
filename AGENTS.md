@@ -149,7 +149,7 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 | 1 | Login / Registro / Logout | ✅ `POST api/usuarios/registro` (201 / 400 / 409), `POST api/usuarios/login` (200 con JWT / 401) | ✅ `CuentaController` (Login, Registro, Logout) con `_LayoutCuenta`, cookie con claim `"token"` | ✅ (ver 6.1) |
 | 2 | Dashboard | ❌ (resumen: próximos viajes, envíos pendientes, nº oportunidades, potencial del mes) | 🟡 `HomeController.Index` es placeholder | ❌ |
 | 3 | Mis viajes | ✅ `GET api/viajes?activo=` | ✅ `Viajes/Index` (filtros Todos/Activos/Inactivos, toast) | 🟡 Ver detalle ✅; los botones Oportunidades / Desactivar apuntan a acciones que **no existen** |
-| 4 | Nuevo viaje | ✅ `POST api/viajes`, ✅ `GET api/viajes/direcciones?texto=` (lista fija) | ✅ `Viajes/Nuevo` + `_FormularioViaje` + `formulario-viaje.js` (paradas: agregar/quitar/reordenar) | 🟡 Distancia/duración = 0 (sin servicio de rutas), direcciones mock, sin mapa |
+| 4 | Nuevo viaje | ✅ `POST api/viajes`, ✅ `GET api/viajes/direcciones?texto=` (lista fija) | ✅ `Viajes/Nuevo` + `_FormularioViaje` + `formulario-viaje.js` (paradas: agregar/quitar/reordenar) | 🟡 Distancia/duración calculadas con `IRutaServicio` (mock), direcciones mock, sin mapa |
 | 5 | Detalle / Editar / Desactivar viaje | ✅ `GET api/viajes/{id}` (`ViajeDetalleDto`: coordenadas, paradas, paquetes asignados, `TieneEnviosPendientes`; 404 si no es propio) · ✅ `PUT api/viajes/{id}` (body `CrearViajeDto`; 204 / 400 / 404 / **409 si tiene envíos ConductorAsignado/Retirado/EnCamino**; reemplaza paradas, días por diferencia) · ❌ `PATCH api/viajes/{id}/desactivar` (o `POST`) | ✅ `Viajes/Detalle` (Editar deshabilitado con tooltip si hay envíos pendientes) · ✅ `Viajes/Editar` (mismo form que Nuevo, prepoblado; GET con pendientes redirige a Detalle) · ❌ `Viajes/Desactivar [POST]` | 🟡 Detalle y Editar hechos; paquetes asignados **mock** (`PaquetesDePrueba()`, `TODO Paquetes asignados`; el flag de pendientes sí usa las asignaciones reales); sin mapa; Desactivar ❌ |
 | — | Paradas dentro de un viaje | 🟡 vía `PUT api/viajes/{id}` (lista completa en orden) · ❌ endpoints propios `api/viajes/{id}/paradas` | se editan en el form del viaje | 🟡 |
 | 6 | Nuevo envío | ❌ `POST api/envios` | ❌ `Envios/Nuevo` | ❌ (enum `TamanoEnvio` y entidad ya existen) |
@@ -161,9 +161,9 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 | 12 | Mis transportes | ❌ `GET api/transportes`, `POST api/transportes/{asignacionId}/estado` (o `/retirado`, `/en-camino`, `/entregado`) | ❌ | ❌ |
 | 13 | Historial | ❌ `GET api/historial?desde=&hasta=&estado=` | ❌ | ❌ |
 | 14 | Potencial mensual (req. para 10) | ❌ `GET api/potencial?mes=yyyy-MM&criterio=` (`ganancia`, `desvio` o `equilibrio`) | ❌ | ❌ |
-| — | Servicio de rutas/mapas | 🟡 `IRutaServicio` + `RutaServicioMock` + `RutasController` (`GET api/rutas/geocodificar`, `POST api/rutas/calcular`, `GET api/rutas/direcciones`, `GET api/rutas/oportunidad-detalle`) | — | 🟡 Mock implementado y registrado en DI; falta integrar este servicio al flujo de Viajes/Oportunidades y una impl. real por proveedor |
+| — | Servicio de rutas/mapas | 🟡 `IRutaServicio` + `RutaServicioMock` + `RutasController` (`GET api/rutas/geocodificar`, `POST api/rutas/calcular`, `GET api/rutas/direcciones`, `GET api/rutas/oportunidad-detalle`) | — | 🟡 Mock implementado y registrado en DI; ya lo usa `ViajeServicio` (distancia/duración); falta integrarlo en Oportunidades y direcciones, y una impl. real por proveedor |
 | — | Layout con sidebar | — | ✅ `_Layout.cshtml` + `_MenuLateral.cshtml` (secciones → `/<Controller>`, activa según el controller actual) + `_MenuUsuario.cshtml` (nombre, email, Cerrar sesión). En celulares el menú es un offcanvas | ✅ Controllers esperados: `Envios`, `Oportunidades`, `Optimizador`, `Transportes`, `Historial`, `Potencial` (acción `Index`); si se usa otro nombre, cambiarlo en `_MenuLateral` |
-| — | Tests unitarios por endpoint | — | — | 🟡 `UsuarioServicio`, `ViajeServicio.ObtenerDetalleAsync` y `ActualizarAsync` |
+| — | Tests unitarios por endpoint | — | — | 🟡 `UsuarioServicio`, `ViajeServicio.ObtenerDetalleAsync`, `CrearAsync` (cálculo de ruta) y `ActualizarAsync` |
 | — | README (cómo correr y configurar BD desde cero) | — | — | ❌ |
 
 ## 6. Mocks y pendientes transversales
@@ -187,8 +187,11 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
   `api/rutas/oportunidad-detalle`), usando datos simulados.
 - `ViajeServicio.BuscarDireccionesAsync` sigue filtrando una lista fija de 12 barrios de CABA/GBA
   (`DireccionesDePrueba()`), sin distinguir tildes/mayúsculas (todavía no usa `IRutaServicio`).
-- `Viaje.DistanciaKm` / `DuracionMin` se guardan en 0.
-- Pendiente: integrar `IRutaServicio` al flujo real de Viajes/Oportunidades y agregar una implementación
+- `Viaje.DistanciaKm` / `DuracionMin` los calcula `ViajeServicio` al crear y editar con
+  `CalcularRutaConParadasAsync`, pasando el recorrido completo en orden (origen, paradas, destino).
+  Con el mock dan 10,5 km + 2,5 por punto y 30 min + 10 por punto. No se muestran en las vistas.
+- Pendiente: integrar `IRutaServicio` en Oportunidades y en la búsqueda de direcciones (su
+  `BuscarDireccionesAsync` devuelve solo textos, sin coordenadas), y agregar una implementación
   por proveedor (Google Maps, OSRM, etc.) seleccionable por configuración.
 
 ## 7. Requisitos del enunciado (resumen fiel)
