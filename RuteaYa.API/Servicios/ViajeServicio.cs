@@ -10,10 +10,12 @@ namespace RuteaYa.API.Servicios
     public class ViajeServicio : IViajeServicio
     {
         private readonly IViajeRepositorio _repositorio;
+        private readonly IRutaServicio _rutaServicio;
 
-        public ViajeServicio(IViajeRepositorio repositorio)
+        public ViajeServicio(IViajeRepositorio repositorio, IRutaServicio rutaServicio)
         {
             _repositorio = repositorio;
+            _rutaServicio = rutaServicio;
         }
 
         public async Task<List<ViajeDto>> ListarPorUsuarioAsync(int usuarioId, bool? activo)
@@ -45,6 +47,7 @@ namespace RuteaYa.API.Servicios
                 Dias = dto.Dias.Distinct().Select(d => new ViajeDia { DiaSemana = d }).ToList()
             };
             AplicarDatos(viaje, dto);
+            await CalcularRutaAsync(viaje);
 
             await _repositorio.AgregarAsync(viaje);
 
@@ -68,6 +71,7 @@ namespace RuteaYa.API.Servicios
             }
 
             AplicarDatos(viaje, dto);
+            await CalcularRutaAsync(viaje);
 
             // ViajeDia tiene clave (ViajeId, DiaSemana): borrar y volver a agregar el mismo día choca
             // en el change tracker, por eso solo se quitan y agregan las diferencias.
@@ -107,9 +111,6 @@ namespace RuteaYa.API.Servicios
             viaje.MaxPaquetes = dto.MaxPaquetes!.Value;
             viaje.PesoMaxKg = dto.PesoMaxKg!.Value;
             viaje.DesvioMaxKm = dto.DesvioMaxKm!.Value;
-            // TODO Servicio de rutas: calcular distancia y duración de la ruta habitual (con paradas).
-            viaje.DistanciaKm = 0;
-            viaje.DuracionMin = 0;
 
             // Las paradas que se quitan de la colección las borra EF (FK obligatoria con cascada).
             viaje.Paradas.Clear();
@@ -120,6 +121,18 @@ namespace RuteaYa.API.Servicios
                 Lat = p.Lat,
                 Lng = p.Lng
             }));
+        }
+
+        // El servicio de rutas no distingue origen/destino de las paradas: recibe el recorrido completo en orden.
+        private async Task CalcularRutaAsync(Viaje viaje)
+        {
+            var recorrido = new List<string> { viaje.OrigenDir };
+            recorrido.AddRange(viaje.Paradas.OrderBy(p => p.Orden).Select(p => p.Direccion));
+            recorrido.Add(viaje.DestinoDir);
+
+            var ruta = await _rutaServicio.CalcularRutaConParadasAsync(recorrido);
+            viaje.DistanciaKm = ruta.DistanciaKm;
+            viaje.DuracionMin = ruta.DuracionMinutos;
         }
 
         private static bool TieneEnviosPendientes(Viaje viaje)
