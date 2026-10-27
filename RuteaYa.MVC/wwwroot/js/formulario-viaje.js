@@ -12,6 +12,10 @@
     const origen = document.getElementById('OrigenDir');
     const destino = document.getElementById('DestinoDir');
 
+    function avisarCambioRuta() {
+        form.dispatchEvent(new CustomEvent('ruta:cambio'));
+    }
+
     // Mismo criterio que el atributo DistintoDe de la API.
     function mismaDireccion(a, b) {
         return a.trim() !== '' && a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -115,6 +119,7 @@
                 lng.value = direccion.lng;
                 validarSiTieneValor(origen);
                 validarSiTieneValor(destino);
+                avisarCambioRuta();
             },
             () => {
                 lat.value = '';
@@ -180,6 +185,7 @@
                 oculto('__Invariant', `Paradas[${i}].Lng`));
             return item;
         }));
+     avisarCambioRuta();
     }
 
     function limpiarSeleccionParada() {

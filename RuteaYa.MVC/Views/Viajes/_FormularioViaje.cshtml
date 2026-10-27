@@ -1,3 +1,4 @@
+@inject IConfiguration Configuration
 @using System.Globalization
 @using RuteaYa.DTOs.Enums
 @model RuteaYa.DTOs.CrearViajeDto
@@ -119,6 +120,12 @@
             </div>
         </div>
 
+        <div class="col-12 mt-3">
+            <label class="form-label small fw-semibold">Vista previa de la ruta</label>
+            <div id="map" style="height: 350px; width: 100%; border-radius: 8px;" class="shadow-sm border"></div>
+        </div>
+
+
         <div class="d-flex justify-content-end gap-2 mt-4">
             @if (idViaje.HasValue)
             {
@@ -132,4 +139,6 @@
             }
         </div>
     </div>
+    <script src="~/js/mapa-viaje.js" asp-append-version="true"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=@Configuration["GoogleMaps:ApiKey"]&callback=initMapaViaje&loading=async" async defer></script>
 </form>
