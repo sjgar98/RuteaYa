@@ -149,8 +149,8 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 | 1 | Login / Registro / Logout | ✅ `POST api/usuarios/registro` (201 / 400 / 409), `POST api/usuarios/login` (200 con JWT / 401) | ✅ `CuentaController` (Login, Registro, Logout) con `_LayoutCuenta`, cookie con claim `"token"` | ✅ (ver 6.1) |
 | 2 | Dashboard | ❌ (resumen: próximos viajes, envíos pendientes, nº oportunidades, potencial del mes) | 🟡 `HomeController.Index` es placeholder | ❌ |
 | 3 | Mis viajes | ✅ `GET api/viajes?activo=` | ✅ `Viajes/Index` (filtros Todos/Activos/Inactivos, toast) | 🟡 Ver detalle ✅; los botones Oportunidades / Desactivar apuntan a acciones que **no existen** |
-| 4 | Nuevo viaje | ✅ `POST api/viajes`, ✅ `GET api/viajes/direcciones?texto=` (lista fija) | ✅ `Viajes/Nuevo` + `_FormularioViaje` + `formulario-viaje.js` (paradas: agregar/quitar/reordenar) | 🟡 Distancia/duración calculadas con `IRutaServicio` (mock), direcciones mock, sin mapa |
-| 5 | Detalle / Editar / Desactivar viaje | ✅ `GET api/viajes/{id}` (`ViajeDetalleDto`: coordenadas, paradas, paquetes asignados, `TieneEnviosPendientes`; 404 si no es propio) · ✅ `PUT api/viajes/{id}` (body `CrearViajeDto`; 204 / 400 / 404 / **409 si tiene envíos ConductorAsignado/Retirado/EnCamino**; reemplaza paradas, días por diferencia) · ❌ `PATCH api/viajes/{id}/desactivar` (o `POST`) | ✅ `Viajes/Detalle` (Editar deshabilitado con tooltip si hay envíos pendientes) · ✅ `Viajes/Editar` (mismo form que Nuevo, prepoblado; GET con pendientes redirige a Detalle) · ❌ `Viajes/Desactivar [POST]` | 🟡 Detalle y Editar hechos; paquetes asignados **mock** (`PaquetesDePrueba()`, `TODO Paquetes asignados`; el flag de pendientes sí usa las asignaciones reales); sin mapa; Desactivar ❌ |
+| 4 | Nuevo viaje | ✅ `POST api/viajes`, ✅ `GET api/viajes/direcciones?texto=` (lista fija) | ✅ `Viajes/Nuevo` + `_FormularioViaje` + `formulario-viaje.js` (paradas: agregar/quitar/reordenar) | 🟡 Distancia/duración calculadas con `IRutaServicio` (mock), direcciones mock. Vista previa de la ruta con Google Maps (`mapa-viaje.js`), ver 6.2 |
+| 5 | Detalle / Editar / Desactivar viaje | ✅ `GET api/viajes/{id}` (`ViajeDetalleDto`: coordenadas, paradas, paquetes asignados, `TieneEnviosPendientes`; 404 si no es propio) · ✅ `PUT api/viajes/{id}` (body `CrearViajeDto`; 204 / 400 / 404 / **409 si tiene envíos ConductorAsignado/Retirado/EnCamino**; reemplaza paradas, días por diferencia) · ❌ `PATCH api/viajes/{id}/desactivar` (o `POST`) | ✅ `Viajes/Detalle` (Editar deshabilitado con tooltip si hay envíos pendientes) · ✅ `Viajes/Editar` (mismo form que Nuevo, prepoblado, con vista previa de ruta; GET con pendientes redirige a Detalle) · ❌ `Viajes/Desactivar [POST]` | 🟡 Detalle y Editar hechos; Editar con vista previa de ruta en Google Maps (ver 6.2); Detalle **sin mapa** (`TODO Servicio de mapas`); paquetes asignados **mock** (`PaquetesDePrueba()`, `TODO Paquetes asignados`; el flag de pendientes sí usa las asignaciones reales); Desactivar ❌ |
 | — | Paradas dentro de un viaje | 🟡 vía `PUT api/viajes/{id}` (lista completa en orden) · ❌ endpoints propios `api/viajes/{id}/paradas` | se editan en el form del viaje | 🟡 |
 | 6 | Nuevo envío | ❌ `POST api/envios` | ❌ `Envios/Nuevo` | ❌ (enum `TamanoEnvio` y entidad ya existen) |
 | 7 | Mis envíos (+ detalle, cancelar) | ❌ `GET api/envios?estado=`, `GET api/envios/{id}`, `POST api/envios/{id}/cancelar` | ❌ `Envios/Index`, `Envios/Detalle` | ❌ |
@@ -193,6 +193,17 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 - Pendiente: integrar `IRutaServicio` en Oportunidades y en la búsqueda de direcciones (su
   `BuscarDireccionesAsync` devuelve solo textos, sin coordenadas), y agregar una implementación
   por proveedor (Google Maps, OSRM, etc.) seleccionable por configuración.
+  - **Mapa en el navegador (Nuevo/Editar viaje):** `wwwroot/js/mapa-viaje.js` dibuja la ruta con
+  Maps JavaScript API + Routes API (`Route.computeRoutes`; la `DirectionsService` legacy ya no
+  está habilitada en proyectos nuevos). Lee las coordenadas de los hidden inputs que completa
+  `formulario-viaje.js` y se actualiza con el evento `ruta:cambio` (`avisarCambioRuta()`).
+  Las paradas respetan el orden elegido (sin optimizar waypoints). La polilínea se calcula en el
+  navegador, no en la API, así que no pasa por `IRutaServicio`.
+- **API key:** `GoogleMaps:ApiKey` (config del MVC). No se commitea: va en `dotnet user-secrets`
+  (`dotnet user-secrets set "GoogleMaps:ApiKey" "<clave>" --project RuteaYa.MVC`). La key necesita
+  Maps JavaScript API y Routes API, restringida por referrer HTTP (`localhost:*`).
+- Pendiente: aviso "Mapa no disponible" si no hay key, mapa en Detalle del viaje, y
+  `RutaServicioGoogle : IRutaServicio` para unificar distancia/duración con lo que se dibuja.
 
 ## 7. Requisitos del enunciado (resumen fiel)
 
@@ -336,3 +347,10 @@ Entregado), Palermo → Avellaneda ($7.000, 8 kg), Caballito → Lomas ($4.000, 
   calculan en el servicio.
 - Al cambiar estados usar entidades con tracking (`ObtenerPorIdAsync`), no las de listados `AsNoTracking`.
 - `RuteaYa.MVC.csproj.user` está versionado con perfil Docker activo; el Dockerfile solo construye el MVC.
+- - Los user-secrets del MVC pisan a `appsettings*.json`. Si guardaste `ApiUrl` ahí, hay que
+  actualizarlo al cambiar de perfil de ejecución de la API (otro puerto), o el MVC queda
+  apuntando a un puerto sin API (`SocketException ... localhost:XXXX`).
+- Sin `GoogleMaps:ApiKey` el formulario de viaje funciona, pero el recuadro del mapa queda vacío.- Los user-secrets del MVC pisan a `appsettings*.json`. Si guardaste `ApiUrl` ahí, hay que
+  actualizarlo al cambiar de perfil de ejecución de la API (otro puerto), o el MVC queda
+  apuntando a un puerto sin API (`SocketException ... localhost:XXXX`).
+- Sin `GoogleMaps:ApiKey` el formulario de viaje funciona, pero el recuadro del mapa queda vacío.
