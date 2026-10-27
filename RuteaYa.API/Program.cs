@@ -16,6 +16,9 @@ var builder = WebApplication.CreateBuilder(args);
 using var db = new RuteaYaDbContext();
 db.Database.Migrate();
 
+//Esto lo agrege xq no queria tocar cosas de las migraciones en la base de datos)? le tengo respeto 
+//await InicializadorDatos.InicializarAsync(db);
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddSwaggerGen(options =>
@@ -46,6 +49,7 @@ builder.Services.AddScoped<IUsuarioServicio, UsuarioServicio>();
 builder.Services.AddScoped<ITokenServicio, TokenServicio>();
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 builder.Services.AddScoped<IRutaServicio, RutaServicioMock>();
+builder.Services.AddScoped<IHistorialServicio, HistorialServicio>(); // <-- Agregado aquí
 
 builder.Services.AddDbContext<RuteaYaDbContext>();
 
@@ -69,6 +73,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 var app = builder.Build();
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
