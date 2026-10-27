@@ -347,10 +347,7 @@ Entregado), Palermo → Avellaneda ($7.000, 8 kg), Caballito → Lomas ($4.000, 
   calculan en el servicio.
 - Al cambiar estados usar entidades con tracking (`ObtenerPorIdAsync`), no las de listados `AsNoTracking`.
 - `RuteaYa.MVC.csproj.user` está versionado con perfil Docker activo; el Dockerfile solo construye el MVC.
-- - Los user-secrets del MVC pisan a `appsettings*.json`. Si guardaste `ApiUrl` ahí, hay que
-  actualizarlo al cambiar de perfil de ejecución de la API (otro puerto), o el MVC queda
-  apuntando a un puerto sin API (`SocketException ... localhost:XXXX`).
-- Sin `GoogleMaps:ApiKey` el formulario de viaje funciona, pero el recuadro del mapa queda vacío.- Los user-secrets del MVC pisan a `appsettings*.json`. Si guardaste `ApiUrl` ahí, hay que
+- Los user-secrets del MVC pisan a `appsettings*.json`. Si guardaste `ApiUrl` ahí, hay que
   actualizarlo al cambiar de perfil de ejecución de la API (otro puerto), o el MVC queda
   apuntando a un puerto sin API (`SocketException ... localhost:XXXX`).
 - Sin `GoogleMaps:ApiKey` el formulario de viaje funciona, pero el recuadro del mapa queda vacío.
