@@ -138,7 +138,7 @@ Repositorios existentes (métodos ya disponibles, muchos aún sin uso):
 - `IEnvioRepositorio`: `ListarPorUsuarioAsync(usuarioId, estado?)`, `ListarDisponiblesAsync(desde, usuarioIdExcluido)` (BuscandoConductor, no vencidos, de otros usuarios), `ListarPorIdsAsync`, `ObtenerPorIdAsync` (con Asignacion+Viaje e Historial), `AgregarAsync`, `GuardarCambiosAsync`.
 - `IAsignacionRepositorio`: `ListarPorConductorAsync`, `ObtenerPorIdAsync`, `AgregarAsync(List<Asignacion>)` (una o varias en un solo `SaveChanges`).
 
-Todos registrados como `Scoped` en `RuteaYa.API/Program.cs`. Servicios de la API: `IViajeServicio`, `IUsuarioServicio`, `ITokenServicio`, `IRutaServicio` (mock actual: `RutaServicioMock`).
+Todos registrados como `Scoped` en `RuteaYa.API/Program.cs`. Servicios de la API: `IViajeServicio`, `IUsuarioServicio`, `ITokenServicio`, `IRutaServicio` (mock actual: `RutaServicioMock`), `IHistorialServicio`.
 
 ## 5. Estado por funcionalidad
 
@@ -159,7 +159,7 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 | 10 | Optimizador | ❌ `GET api/viajes/{id}/optimizacion` (o `POST`) | ❌ | ❌ |
 | 11 | Confirmación / asignación | ❌ `POST api/asignaciones` (viajeId, fecha, envioIds[]) → 201 / 409 | ❌ | ❌ |
 | 12 | Mis transportes | ❌ `GET api/transportes`, `POST api/transportes/{asignacionId}/estado` (o `/retirado`, `/en-camino`, `/entregado`) | ❌ | ❌ |
-| 13 | Historial | ❌ `GET api/historial?desde=&hasta=&estado=` | ❌ | ❌ |
+| 13 | Historial | ✅ `GET api/historial?desde=&hasta=&orden=&estado=` (viajes con envios entregados, orden por fecha/monto) | 🟡 `HistorialController.Index` + `Views/Historial/Index` (KPIs, filtros por fecha/orden, link a detalle de viaje) | 🟡 Falta cubrir estados/tipos adicionales y tests unitarios del servicio |
 | 14 | Potencial mensual (req. para 10) | ❌ `GET api/potencial?mes=yyyy-MM&criterio=` (`ganancia`, `desvio` o `equilibrio`) | ❌ | ❌ |
 | — | Servicio de rutas/mapas | 🟡 `IRutaServicio` + `RutaServicioMock` + `RutasController` (`GET api/rutas/geocodificar`, `POST api/rutas/calcular`, `GET api/rutas/direcciones`, `GET api/rutas/oportunidad-detalle`) | — | 🟡 Mock implementado y registrado en DI; ya lo usa `ViajeServicio` (distancia/duración); falta integrarlo en Oportunidades y direcciones, y una impl. real por proveedor |
 | — | Layout con sidebar | — | ✅ `_Layout.cshtml` + `_MenuLateral.cshtml` (secciones → `/<Controller>`, activa según el controller actual) + `_MenuUsuario.cshtml` (nombre, email, Cerrar sesión). En celulares el menú es un offcanvas | ✅ Controllers esperados: `Envios`, `Oportunidades`, `Optimizador`, `Transportes`, `Historial`, `Potencial` (acción `Index`); si se usa otro nombre, cambiarlo en `_MenuLateral` |

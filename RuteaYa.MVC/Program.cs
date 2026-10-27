@@ -36,6 +36,10 @@ builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
 });
+builder.Services.AddHttpClient<IHistorialServicio, HistorialServicio>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ApiUrl"]!);
+}).AddHttpMessageHandler<TokenHandler>();
 
 var app = builder.Build();
 
