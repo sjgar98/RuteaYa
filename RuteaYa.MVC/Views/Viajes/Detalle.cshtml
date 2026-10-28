@@ -1,6 +1,7 @@
 @model RuteaYa.DTOs.ViajeDetalleDto
 @{
     ViewData["Title"] = "Detalle del viaje";
+    ViewData["ViajeMapa"] = Model;
 }
 
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
@@ -38,7 +39,9 @@
             <div class="card-body">
                 <h2 class="h6 fw-semibold mb-3">Recorrido</h2>
 
-                @* TODO Servicio de mapas: mostrar el mapa con el recorrido y sus paradas. *@
+                <div class="mb-3">
+                    <partial name="_MapaRuta" />
+                </div>
 
                 <dl class="detalle-filas mb-0">
                     <div>
