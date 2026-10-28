@@ -47,7 +47,7 @@ docker compose --env-file .env up -d
 
 ## 2. Arquitectura
 
-```
+```text
 RuteaYa.MVC ──HTTP(JSON)──▶ RuteaYa.API ──▶ RuteaYa.Repositorios ──▶ RuteaYa.Entidades (EF/DbContext)
      │                          │                                          │
      └──────────── RuteaYa.DTOs ◀──────────────────────────────────────────┘ (enums compartidos)
