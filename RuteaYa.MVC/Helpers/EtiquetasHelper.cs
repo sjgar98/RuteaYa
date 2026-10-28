@@ -46,5 +46,33 @@ namespace RuteaYa.MVC.Helpers
         {
             return valor.ToString("0.##", _cultura);
         }
+
+        public static string Texto(this TamanoEnvio tamano)
+        {
+            return tamano switch
+            {
+                TamanoEnvio.Pequeno => "Pequeño",
+                TamanoEnvio.Mediano => "Mediano",
+                _ => "Grande"
+            };
+        }
+        public static string ClaseBadge(this EstadoEnvio estado)
+        {
+            return estado switch
+            {
+                EstadoEnvio.BuscandoConductor => "text-bg-warning-subtle text-warning-emphasis",
+                EstadoEnvio.ConductorAsignado => "text-bg-light border",
+                EstadoEnvio.Retirado => "text-bg-light border",
+                EstadoEnvio.EnCamino => "text-bg-info-subtle text-info-emphasis",
+                EstadoEnvio.Entregado => "text-bg-success-subtle text-success-emphasis",
+                _ => "text-bg-danger-subtle text-danger-emphasis"
+            };
+        }
+        private static readonly TimeZoneInfo _zonaArgentina = TimeZoneInfo.CreateCustomTimeZone(
+            "Argentina", TimeSpan.FromHours(-3), "Hora de Argentina", "Hora de Argentina");
+        public static DateTime AHoraLocal(this DateTime fechaUtc)
+        {
+            return TimeZoneInfo.ConvertTimeFromUtc(fechaUtc, _zonaArgentina);
+        }
     }
 }

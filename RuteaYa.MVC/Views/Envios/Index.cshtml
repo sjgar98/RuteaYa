@@ -1,0 +1,54 @@
+﻿@model RuteaYa.MVC.Models.MisEnviosViewModel
+@using RuteaYa.DTOs.Enums
+@{
+    ViewData["Title"] = "Mis envíos";
+
+    string ClaseFiltro(EstadoEnvio? filtro) => Model.Estado == filtro ? "btn-dark" : "btn-outline-secondary";
+}
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h1 class="h3 mb-0">Mis envíos</h1>
+        <p class="text-muted small mb-0">Seguí el estado de lo que enviaste.</p>
+    </div>
+    <a class="btn btn-dark btn-sm" asp-action="Nuevo">Nuevo envío</a>
+</div>
+
+<nav class="d-flex flex-wrap gap-2 mb-3">
+    <a class="btn btn-sm rounded-pill @ClaseFiltro(null)" asp-action="Index">Todos</a>
+    <a class="btn btn-sm rounded-pill @ClaseFiltro(EstadoEnvio.BuscandoConductor)" asp-action="Index" asp-route-estado="BuscandoConductor">Buscando conductor</a>
+    <a class="btn btn-sm rounded-pill @ClaseFiltro(EstadoEnvio.ConductorAsignado)" asp-action="Index" asp-route-estado="ConductorAsignado">Conductor asignado</a>
+    <a class="btn btn-sm rounded-pill @ClaseFiltro(EstadoEnvio.Entregado)" asp-action="Index" asp-route-estado="Entregado">Entregado</a>
+    <a class="btn btn-sm rounded-pill @ClaseFiltro(EstadoEnvio.Cancelado)" asp-action="Index" asp-route-estado="Cancelado">Cancelado</a>
+</nav>
+
+<div class="card border-0 shadow-sm rounded-4">
+    @if (Model.Envios.Count == 0)
+    {
+        <div class="card-body text-center text-muted py-5">No tenés envíos para mostrar.</div>
+    }
+    else
+    {
+        <ul class="list-group list-group-flush rounded-4">
+            @foreach (var envio in Model.Envios)
+            {
+                <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+                    <div>
+                        <div class="fw-semibold">@envio.OrigenDir → @envio.DestinoDir</div>
+                        <div class="text-muted small">@envio.Descripcion · @envio.Monto.Moneda()</div>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <span class="badge rounded-pill @envio.Estado.ClaseBadge()">@envio.Estado.Texto()</span>
+                        <a class="btn btn-outline-secondary btn-sm" asp-action="Detalle" asp-route-id="@envio.Id">Ver detalle</a>
+                        @if (envio.PuedeCancelar)
+                        {
+                            <form asp-action="Cancelar" asp-route-id="@envio.Id" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">Cancelar</button>
+                            </form>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>
