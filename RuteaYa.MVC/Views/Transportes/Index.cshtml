@@ -1,0 +1,59 @@
+﻿@model RuteaYa.MVC.Models.MisTransportesViewModel
+@{
+    ViewData["Title"] = "Mis transportes";
+}
+
+<div class="mb-3">
+    <h1 class="h3 mb-0">Mis transportes</h1>
+    <p class="text-muted small mb-0">Paquetes que aceptaste llevar.</p>
+</div>
+
+@if (Model.Error != null)
+{
+    <div class="alert alert-danger">@Model.Error</div>
+}
+
+<div class="card border-0 shadow-sm rounded-4">
+    @if (Model.Transportes.Count == 0)
+    {
+        <div class="card-body text-center text-muted py-5">No tenés paquetes para transportar todavía.</div>
+    }
+    else
+    {
+        <ul class="list-group list-group-flush rounded-4">
+            @foreach (var t in Model.Transportes)
+            {
+                <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+                    <div>
+                        <div class="fw-semibold">@t.Descripcion</div>
+                        <div class="text-muted small">@t.OrigenDir → @t.DestinoDir · @t.Ganancia.Moneda()</div>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <span class="badge rounded-pill @t.Estado.ClaseBadge()">@t.Estado.Texto()</span>
+                        <a class="btn btn-outline-secondary btn-sm" asp-controller="Viajes" asp-action="Detalle" asp-route-id="@t.ViajeId">Ver viaje</a>
+                        <a class="btn btn-outline-secondary btn-sm" asp-controller="Envios" asp-action="Detalle" asp-route-id="@t.EnvioId">Ver envío</a>
+
+                        @if (t.PuedeMarcarRetirado)
+                        {
+                            <form asp-action="MarcarRetirado" asp-route-asignacionId="@t.AsignacionId" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-dark btn-sm">Marcar retirado</button>
+                            </form>
+                        }
+                        else if (t.PuedeMarcarEnCamino)
+                        {
+                            <form asp-action="MarcarEnCamino" asp-route-asignacionId="@t.AsignacionId" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-dark btn-sm">Marcar en camino</button>
+                            </form>
+                        }
+                        else if (t.PuedeMarcarEntregado)
+                        {
+                            <form asp-action="MarcarEntregado" asp-route-asignacionId="@t.AsignacionId" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-dark btn-sm">Marcar entregado</button>
+                            </form>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>

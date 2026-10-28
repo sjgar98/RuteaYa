@@ -21,6 +21,9 @@ builder.Services.AddHttpClient<IViajeServicio, ViajeServicio>(c => c.BaseAddress
 // Login y registro no llevan token: la API los permite sin autenticación.
 builder.Services.AddHttpClient<ICuentaServicio, CuentaServicio>(c => c.BaseAddress = apiUrl);
 
+builder.Services.AddHttpClient<IEnvioServicio, EnvioServicio>(c => c.BaseAddress = apiUrl)
+    .AddHttpMessageHandler<TokenHandler>();
+
 // Cookie del MVC. El login guarda en ella el JWT de la API como claim "token".
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -40,6 +43,9 @@ builder.Services.AddHttpClient<IHistorialServicio, HistorialServicio>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["ApiUrl"]!);
 }).AddHttpMessageHandler<TokenHandler>();
+
+builder.Services.AddHttpClient<ITransporteServicio, TransporteServicio>(c => c.BaseAddress = apiUrl)
+    .AddHttpMessageHandler<TokenHandler>();
 
 var app = builder.Build();
 

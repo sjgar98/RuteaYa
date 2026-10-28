@@ -49,7 +49,9 @@ builder.Services.AddScoped<IUsuarioServicio, UsuarioServicio>();
 builder.Services.AddScoped<ITokenServicio, TokenServicio>();
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 builder.Services.AddScoped<IRutaServicio, RutaServicioMock>();
-builder.Services.AddScoped<IHistorialServicio, HistorialServicio>(); // <-- Agregado aquí
+builder.Services.AddScoped<IHistorialServicio, HistorialServicio>();
+builder.Services.AddScoped<IEnvioServicio, EnvioServicio>();
+builder.Services.AddScoped<ITransporteServicio, TransporteServicio>();
 
 builder.Services.AddDbContext<RuteaYaDbContext>();
 
