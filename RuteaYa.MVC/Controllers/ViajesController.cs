@@ -117,6 +117,22 @@ namespace RuteaYa.MVC.Controllers
             return RedirectToAction(nameof(Detalle), new { id });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public Task<IActionResult> Desactivar(int id, string? returnUrl)
+        {
+            return AplicarCambioActivoAsync(id, returnUrl, () => _viajeServicio.DesactivarAsync(id),
+                "El viaje se desactivó correctamente.");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public Task<IActionResult> Activar(int id, string? returnUrl)
+        {
+            return AplicarCambioActivoAsync(id, returnUrl, () => _viajeServicio.ActivarAsync(id),
+                "El viaje se activó correctamente.");
+        }
+
         // Autocompletado de origen, destino y paradas (lo llama la vista Nuevo con fetch).
         public async Task<IActionResult> BuscarDirecciones(string texto)
         {
@@ -126,6 +142,37 @@ namespace RuteaYa.MVC.Controllers
             }
 
             return Json(await _viajeServicio.BuscarDireccionesAsync(texto.Trim()));
+        }
+
+        // returnUrl permite volver a Mis viajes con el filtro aplicado o al detalle, según desde dónde se pidió.
+        private async Task<IActionResult> AplicarCambioActivoAsync(int id, string? returnUrl,
+            Func<Task<ResultadoCambioEstado>> accion, string mensajeExito)
+        {
+            var resultado = await accion();
+            if (resultado.NoEncontrado)
+            {
+                return NotFound();
+            }
+
+            if (resultado.Conflicto != null)
+            {
+                var viaje = await _viajeServicio.ObtenerDetalleAsync(id);
+                if (viaje == null)
+                {
+                    return NotFound();
+                }
+
+                ViewData["Error"] = resultado.Conflicto;
+                return View(nameof(Detalle), viaje);
+            }
+
+            TempData["MensajeExito"] = mensajeExito;
+            if (Url.IsLocalUrl(returnUrl))
+            {
+                return LocalRedirect(returnUrl);
+            }
+
+            return RedirectToAction(nameof(Detalle), new { id });
         }
 
         // Errores de validación de la API, para mostrarlos junto a cada campo.

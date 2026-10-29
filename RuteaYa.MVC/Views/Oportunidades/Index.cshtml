@@ -1,0 +1,110 @@
+@model List<RuteaYa.DTOs.OportunidadDto>
+
+@{
+    ViewData["Title"] = "Oportunidades de Envíos";
+}
+
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Oportunidades de Envíos</h1>
+            <p class="text-muted">Envíos compatibles con tu viaje</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="@Url.Action("Index", "Viajes")" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Volver a Mis Viajes
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-@(TempData["Tipo"]?.ToString() == "error" ? "danger" : "success") alert-dismissible fade show" role="alert">
+            @TempData["Mensaje"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            <p>No hay oportunidades disponibles en este momento.</p>
+            <p class="mb-0 small">Los envíos deben cumplir con la capacidad de peso y cantidad, así como no exceder el desvío máximo permitido.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="ordenarPor" class="form-label">Ordenar por:</label>
+                <select class="form-select" id="ordenarPor" onchange="cambiarOrdenamiento(this.value)">
+                    <option value="ganancia" selected>Ganancia (Mayor a menor)</option>
+                    <option value="desvio">Desvío (Menor a mayor)</option>
+                    <option value="compatibilidad">Compatibilidad</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Origen</th>
+                        <th>Destino</th>
+                        <th>Peso (kg)</th>
+                        <th>Desvío (km)</th>
+                        <th>Ganancia ($)</th>
+                        <th>Compatibilidad</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var oportunidad in Model)
+                    {
+                        <tr>
+                            <td>
+                                <small>@oportunidad.Origen</small>
+                            </td>
+                            <td>
+                                <small>@oportunidad.Destino</small>
+                            </td>
+                            <td>
+                                <strong>@oportunidad.PesoKg.ToString("F2")</strong>
+                            </td>
+                            <td>
+                                @oportunidad.DesvioKm.ToString("F2")
+                            </td>
+                            <td>
+                                <strong class="text-success">$@oportunidad.MontoPago.ToString("F2")</strong>
+                            </td>
+                            <td>
+                                @{
+                                    var badgeClass = oportunidad.Compatibilidad switch
+                                    {
+                                        "Muy compatible" => "bg-success",
+                                        "Compatible" => "bg-info",
+                                        _ => "bg-warning"
+                                    };
+                                }
+                                <span class="badge @badgeClass">@oportunidad.Compatibilidad</span>
+                            </td>
+                            <td>
+                                <a href="@Url.Action("Detalle", new { viajeId = (int)ViewData["ViajeId"], envioId = oportunidad.EnvioId })" 
+                                   class="btn btn-sm btn-primary">
+                                    Ver Detalle
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<script>
+    function cambiarOrdenamiento(valor) {
+        const viajeId = @Html.Raw((int)ViewData["ViajeId"]);
+        window.location.href = `@Url.Action("Index")?viajeId=${viajeId}&ordenarPor=${valor}`;
+    }
+</script>

@@ -18,6 +18,8 @@ namespace RuteaYa.Repositorios
             var query = _db.Viajes
                 .AsNoTracking()
                 .Include(v => v.Dias)
+                .Include(v => v.Asignaciones)
+                    .ThenInclude(a => a.Envio)
                 .Where(v => v.UsuarioId == usuarioId);
 
             // null devuelve todos (activos e inactivos)

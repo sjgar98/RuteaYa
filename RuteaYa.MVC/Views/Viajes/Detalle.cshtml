@@ -23,15 +23,35 @@
         {
             <a class="btn btn-outline-secondary btn-sm" asp-action="Editar" asp-route-id="@Model.Id">Editar</a>
         }
-        @if (Model.Activo)
+        @if (!Model.Activo)
+        {
+            <form asp-action="Activar" asp-route-id="@Model.Id" method="post" class="d-inline">
+                <input type="hidden" name="returnUrl" value="@Url.Action("Detalle", new { id = Model.Id })" />
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Activar</button>
+            </form>
+        }
+        else if (Model.TieneEnviosPendientes)
+        {
+            <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip"
+                  title="Hay envíos pendientes en este viaje: no se puede desactivar.">
+                <button type="button" class="btn btn-outline-secondary btn-sm" disabled>Desactivar</button>
+            </span>
+        }
+        else
         {
             <form asp-action="Desactivar" asp-route-id="@Model.Id" method="post" class="d-inline">
+                <input type="hidden" name="returnUrl" value="@Url.Action("Detalle", new { id = Model.Id })" />
                 <button type="submit" class="btn btn-outline-secondary btn-sm">Desactivar</button>
             </form>
         }
         <a class="btn btn-dark btn-sm" asp-controller="Oportunidades" asp-action="Index" asp-route-viajeId="@Model.Id">Ver oportunidades</a>
     </div>
 </div>
+
+@if (ViewData["Error"] is string error)
+{
+    <div class="alert alert-danger">@error</div>
+}
 
 <div class="row g-3">
     <div class="col-lg-6">

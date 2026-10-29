@@ -95,6 +95,46 @@ namespace RuteaYa.API.Controllers
             };
         }
 
+        /// <summary>Desactiva un viaje del usuario autenticado (deja de recibir oportunidades; no se borra).</summary>
+        /// <response code="204">Viaje desactivado.</response>
+        /// <response code="404">El viaje no existe o pertenece a otro usuario.</response>
+        /// <response code="409">El viaje tiene envíos pendientes (asignados, retirados o en camino).</response>
+        [HttpPost("{id:int}/desactivar")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> Desactivar(int id)
+        {
+            var usuarioId = User.ObtenerUsuarioId();
+
+            var resultado = await _viajeServicio.CambiarActivoAsync(usuarioId, id, false);
+
+            return resultado switch
+            {
+                ResultadoOperacion.NoEncontrado => NotFound(),
+                ResultadoOperacion.Conflicto => Problem(statusCode: StatusCodes.Status409Conflict,
+                    title: "El viaje tiene envíos pendientes y no se puede desactivar."),
+                _ => NoContent()
+            };
+        }
+
+        /// <summary>Vuelve a activar un viaje del usuario autenticado.</summary>
+        /// <response code="204">Viaje activado.</response>
+        /// <response code="404">El viaje no existe o pertenece a otro usuario.</response>
+        [HttpPost("{id:int}/activar")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> Activar(int id)
+        {
+            var usuarioId = User.ObtenerUsuarioId();
+
+            var resultado = await _viajeServicio.CambiarActivoAsync(usuarioId, id, true);
+
+            return resultado == ResultadoOperacion.NoEncontrado ? NotFound() : NoContent();
+        }
+
         /// <summary>Busca direcciones que coincidan con el texto (origen, destino o paradas).</summary>
         /// <param name="texto">Texto a buscar, al menos 3 caracteres.</param>
         [HttpGet("direcciones")]

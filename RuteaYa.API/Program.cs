@@ -52,6 +52,7 @@ builder.Services.AddScoped<IRutaServicio, RutaServicioMock>();
 builder.Services.AddScoped<IHistorialServicio, HistorialServicio>();
 builder.Services.AddScoped<IEnvioServicio, EnvioServicio>();
 builder.Services.AddScoped<ITransporteServicio, TransporteServicio>();
+builder.Services.AddScoped<IOportunidadesServicio, OportunidadesServicio>();
 
 builder.Services.AddDbContext<RuteaYaDbContext>();
 

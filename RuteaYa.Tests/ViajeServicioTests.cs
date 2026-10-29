@@ -88,6 +88,95 @@ namespace RuteaYa.Tests
         }
 
         [Fact]
+        public async Task ListarPorUsuarioAsync_InformaEnviosPendientesPorViaje()
+        {
+            var repositorio = new ViajeRepositorioFalso();
+            repositorio.Viajes.Add(CrearViaje(id: 5, usuarioId: UsuarioId, estadosAsignados: EstadoEnvio.Retirado));
+            repositorio.Viajes.Add(CrearViaje(id: 6, usuarioId: UsuarioId, estadosAsignados: EstadoEnvio.Entregado));
+            var servicio = new ViajeServicio(repositorio, new RutaServicioFalso());
+
+            var viajes = await servicio.ListarPorUsuarioAsync(UsuarioId, null);
+
+            Assert.True(viajes.Single(v => v.Id == 5).TieneEnviosPendientes);
+            Assert.False(viajes.Single(v => v.Id == 6).TieneEnviosPendientes);
+        }
+
+        [Fact]
+        public async Task CambiarActivoAsync_ViajeInexistente_DevuelveNoEncontrado()
+        {
+            var servicio = new ViajeServicio(new ViajeRepositorioFalso(), new RutaServicioFalso());
+
+            var resultado = await servicio.CambiarActivoAsync(UsuarioId, 99, false);
+
+            Assert.Equal(ResultadoOperacion.NoEncontrado, resultado);
+        }
+
+        [Fact]
+        public async Task CambiarActivoAsync_ViajeDeOtroUsuario_DevuelveNoEncontradoYNoLoModifica()
+        {
+            var repositorio = new ViajeRepositorioFalso();
+            var viaje = CrearViaje(id: 5, usuarioId: 2);
+            repositorio.Viajes.Add(viaje);
+            var servicio = new ViajeServicio(repositorio, new RutaServicioFalso());
+
+            var resultado = await servicio.CambiarActivoAsync(UsuarioId, 5, false);
+
+            Assert.Equal(ResultadoOperacion.NoEncontrado, resultado);
+            Assert.True(viaje.Activo);
+            Assert.Equal(0, repositorio.CantidadGuardados);
+        }
+
+        [Theory]
+        [InlineData(EstadoEnvio.ConductorAsignado)]
+        [InlineData(EstadoEnvio.Retirado)]
+        [InlineData(EstadoEnvio.EnCamino)]
+        public async Task CambiarActivoAsync_DesactivarConEnviosPendientes_DevuelveConflictoYNoLoModifica(EstadoEnvio estado)
+        {
+            var repositorio = new ViajeRepositorioFalso();
+            var viaje = CrearViaje(id: 5, usuarioId: UsuarioId, estadosAsignados: estado);
+            repositorio.Viajes.Add(viaje);
+            var servicio = new ViajeServicio(repositorio, new RutaServicioFalso());
+
+            var resultado = await servicio.CambiarActivoAsync(UsuarioId, 5, false);
+
+            Assert.Equal(ResultadoOperacion.Conflicto, resultado);
+            Assert.True(viaje.Activo);
+            Assert.Equal(0, repositorio.CantidadGuardados);
+        }
+
+        [Fact]
+        public async Task CambiarActivoAsync_DesactivarConEnviosFinalizados_LoDesactiva()
+        {
+            var repositorio = new ViajeRepositorioFalso();
+            var viaje = CrearViaje(id: 5, usuarioId: UsuarioId,
+                estadosAsignados: new[] { EstadoEnvio.Entregado, EstadoEnvio.Cancelado });
+            repositorio.Viajes.Add(viaje);
+            var servicio = new ViajeServicio(repositorio, new RutaServicioFalso());
+
+            var resultado = await servicio.CambiarActivoAsync(UsuarioId, 5, false);
+
+            Assert.Equal(ResultadoOperacion.Exito, resultado);
+            Assert.False(viaje.Activo);
+            Assert.Equal(1, repositorio.CantidadGuardados);
+        }
+
+        [Fact]
+        public async Task CambiarActivoAsync_ActivarViajeInactivo_LoActiva()
+        {
+            var repositorio = new ViajeRepositorioFalso();
+            var viaje = CrearViaje(id: 5, usuarioId: UsuarioId, estadosAsignados: EstadoEnvio.ConductorAsignado);
+            viaje.Activo = false;
+            repositorio.Viajes.Add(viaje);
+            var servicio = new ViajeServicio(repositorio, new RutaServicioFalso());
+
+            var resultado = await servicio.CambiarActivoAsync(UsuarioId, 5, true);
+
+            Assert.Equal(ResultadoOperacion.Exito, resultado);
+            Assert.True(viaje.Activo);
+            Assert.Equal(1, repositorio.CantidadGuardados);
+        }
+
+        [Fact]
         public async Task ActualizarAsync_ViajeInexistente_DevuelveNoEncontrado()
         {
             var servicio = new ViajeServicio(new ViajeRepositorioFalso(), new RutaServicioFalso());
