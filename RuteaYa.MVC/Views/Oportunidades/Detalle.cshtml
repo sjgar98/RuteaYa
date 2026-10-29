@@ -1,0 +1,173 @@
+@model RuteaYa.DTOs.DetalleOportunidadDto
+
+@{
+    ViewData["Title"] = "Detalle de Oportunidad";
+}
+
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Detalle de Oportunidad</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="@Url.Action("Index", new { viajeId = (int)ViewData["ViajeId"] })" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Volver al Listado
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["Mensaje"] != null)
+    {
+        <div class="alert alert-@(TempData["Tipo"]?.ToString() == "error" ? "danger" : "success") alert-dismissible fade show" role="alert">
+            @TempData["Mensaje"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (Model?.Envio != null && Model?.RutaDetalle != null)
+    {
+        <div class="row">
+            <!-- Información del Envío -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Información del Envío</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-sm-5 fw-bold">Origen:</div>
+                            <div class="col-sm-7">@Model.Envio.OrigenDir</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-5 fw-bold">Destino:</div>
+                            <div class="col-sm-7">@Model.Envio.DestinoDir</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-5 fw-bold">Peso:</div>
+                            <div class="col-sm-7">@Model.Envio.PesoKg.ToString("F2") kg</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-5 fw-bold">Tamaño:</div>
+                            <div class="col-sm-7">@Model.Envio.Tamano</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-5 fw-bold">Descripción:</div>
+                            <div class="col-sm-7">@Model.Envio.Descripcion</div>
+                        </div>
+                        <div class="row mb-0">
+                            <div class="col-sm-5 fw-bold">Fecha Límite:</div>
+                            <div class="col-sm-7">@Model.Envio.FechaLimite.ToString("dd/MM/yyyy")</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información de Ganancia y Compatibilidad -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Impacto en tu Viaje</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-sm-5 fw-bold">Ganancia:</div>
+                            <div class="col-sm-7">
+                                <span class="h5 text-success">$@Model.RutaDetalle.MontoPago.ToString("F2")</span>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-5 fw-bold">Desvío km:</div>
+                            <div class="col-sm-7">@Model.RutaDetalle.DesvioKm.ToString("F2") km</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-5 fw-bold">Tiempo Extra:</div>
+                            <div class="col-sm-7">@Model.RutaDetalle.TiempoAdicionalMinutos min</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-5 fw-bold">Ganancia por km:</div>
+                            <div class="col-sm-7">$@Model.RutaDetalle.GananciaPorKmAdicional.ToString("F2")/km</div>
+                        </div>
+                        <div class="row mb-0">
+                            <div class="col-sm-5 fw-bold">Capacidad Restante:</div>
+                            <div class="col-sm-7">
+                                @Model.RutaDetalle.CapacidadRestantePaquetes más paquetes
+                                <br/>
+                                @Model.RutaDetalle.CapacidadRestanteKg.ToString("F2") kg más
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información de Rutas -->
+        <div class="row mb-4">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Ruta Habitual</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-sm-5 fw-bold">Distancia:</div>
+                            <div class="col-sm-7">@Model.RutaDetalle.RutaHabitual.DistanciaKm.ToString("F2") km</div>
+                        </div>
+                        <div class="row mb-0">
+                            <div class="col-sm-5 fw-bold">Duración:</div>
+                            <div class="col-sm-7">@Model.RutaDetalle.RutaHabitual.DuracionMinutos min</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Ruta con Este Envío</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-sm-5 fw-bold">Distancia:</div>
+                            <div class="col-sm-7">@Model.RutaDetalle.RutaConEnvio.DistanciaKm.ToString("F2") km</div>
+                        </div>
+                        <div class="row mb-0">
+                            <div class="col-sm-5 fw-bold">Duración:</div>
+                            <div class="col-sm-7">@Model.RutaDetalle.RutaConEnvio.DuracionMinutos min</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botón Aceptar -->
+        <div class="row">
+            <div class="col-md-12">
+                <form method="post" action="@Url.Action("Aceptar", new { viajeId = (int)ViewData["ViajeId"], envioId = Model.EnvioId })" 
+                      onsubmit="return confirm('¿Confirmar aceptación de esta oportunidad?')">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-success btn-lg w-100">
+                        <i class="bi bi-check-lg"></i> Aceptar Oportunidad
+                    </button>
+                </form>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-danger">
+            <p>No se pudo cargar el detalle de la oportunidad.</p>
+            <p class="mb-0 small">La oportunidad puede que ya no esté disponible o haya sido asignada a otro conductor.</p>
+        </div>
+    }
+</div>
+
+<style>
+    .table-responsive {
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+    }
+
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+</style>
