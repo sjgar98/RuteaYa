@@ -86,6 +86,27 @@ namespace RuteaYa.API.Servicios
             return ResultadoOperacion.Exito;
         }
 
+        public async Task<ResultadoOperacion> CambiarActivoAsync(int usuarioId, int id, bool activo)
+        {
+            var viaje = await _repositorio.ObtenerPorIdAsync(id);
+
+            if (viaje == null || viaje.UsuarioId != usuarioId)
+            {
+                return ResultadoOperacion.NoEncontrado;
+            }
+
+            // Un viaje inactivo no recibe oportunidades: dejaría sin conductor a los envíos en curso.
+            if (!activo && TieneEnviosPendientes(viaje))
+            {
+                return ResultadoOperacion.Conflicto;
+            }
+
+            viaje.Activo = activo;
+            await _repositorio.GuardarCambiosAsync();
+
+            return ResultadoOperacion.Exito;
+        }
+
         public Task<List<DireccionDto>> BuscarDireccionesAsync(string texto)
         {
             // TODO Servicio de mapas: reemplazar la lista fija por la búsqueda del proveedor de mapas.
@@ -154,7 +175,6 @@ namespace RuteaYa.API.Servicios
             dto.OrigenLng = viaje.OrigenLng;
             dto.DestinoLat = viaje.DestinoLat;
             dto.DestinoLng = viaje.DestinoLng;
-            dto.TieneEnviosPendientes = TieneEnviosPendientes(viaje);
 
             dto.Paradas = viaje.Paradas
                 .OrderBy(p => p.Orden)
@@ -181,6 +201,7 @@ namespace RuteaYa.API.Servicios
             dto.DistanciaKm = viaje.DistanciaKm;
             dto.DuracionMin = viaje.DuracionMin;
             dto.Activo = viaje.Activo;
+            dto.TieneEnviosPendientes = TieneEnviosPendientes(viaje);
             return dto;
         }
 

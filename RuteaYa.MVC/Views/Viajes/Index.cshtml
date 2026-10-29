@@ -3,6 +3,9 @@
     ViewData["Title"] = "Mis viajes";
 
     string ClaseFiltro(bool? filtro) => Model.Activo == filtro ? "btn-dark" : "btn-outline-secondary";
+
+    // Al activar o desactivar se vuelve a esta misma lista, con el filtro aplicado.
+    var urlActual = $"{Context.Request.Path}{Context.Request.QueryString}";
 }
 
 <div class="d-flex justify-content-between align-items-start mb-3">
@@ -48,9 +51,24 @@
                         }
                         <a class="btn btn-outline-secondary btn-sm" asp-action="Detalle" asp-route-id="@viaje.Id">Ver detalle</a>
                         <a class="btn btn-outline-secondary btn-sm" asp-controller="Oportunidades" asp-action="Index" asp-route-viajeId="@viaje.Id">Oportunidades</a>
-                        @if (viaje.Activo)
+                        @if (!viaje.Activo)
+                        {
+                            <form asp-action="Activar" asp-route-id="@viaje.Id" method="post" class="d-inline">
+                                <input type="hidden" name="returnUrl" value="@urlActual" />
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">Activar</button>
+                            </form>
+                        }
+                        else if (viaje.TieneEnviosPendientes)
+                        {
+                            <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip"
+                                  title="Hay envíos pendientes en este viaje: no se puede desactivar.">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" disabled>Desactivar</button>
+                            </span>
+                        }
+                        else
                         {
                             <form asp-action="Desactivar" asp-route-id="@viaje.Id" method="post" class="d-inline">
+                                <input type="hidden" name="returnUrl" value="@urlActual" />
                                 <button type="submit" class="btn btn-outline-secondary btn-sm">Desactivar</button>
                             </form>
                         }
