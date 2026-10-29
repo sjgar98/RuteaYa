@@ -15,6 +15,10 @@ namespace RuteaYa.MVC.Servicios.Interfaces
 
         Task<ResultadoEdicionViaje> ActualizarAsync(int id, CrearViajeDto dto);
 
+        Task<ResultadoCambioEstado> DesactivarAsync(int id);
+
+        Task<ResultadoCambioEstado> ActivarAsync(int id);
+
         Task<List<DireccionDto>> BuscarDireccionesAsync(string texto);
     }
 }
