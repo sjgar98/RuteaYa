@@ -4,6 +4,7 @@ using RuteaYa.DTOs.Enums;
 using RuteaYa.DTOs.Rutas;
 using RuteaYa.Entidades;
 using RuteaYa.Repositorios.Interfaces;
+using RuteaYa.API.Servicios.Rutas;
 
 namespace RuteaYa.API.Servicios
 {
@@ -47,6 +48,9 @@ namespace RuteaYa.API.Servicios
             int capacidadRestantePaquetes = viaje.MaxPaquetes - paquetesUsados;
             decimal capacidadRestanteKg = viaje.PesoMaxKg - pesoUsado;
 
+            var recorrido = RecorridoHabitual(viaje);
+            decimal largoHabitual = GeoUtil.LongitudKm(recorrido);
+
             // Filtrar: solo envíos que cumplen restricciones básicas
             var candidatos = new List<(Envio envio, int capacidadRestante, decimal pesoRestante)>();
 
@@ -61,13 +65,20 @@ namespace RuteaYa.API.Servicios
                     continue;
 
                 // Filtro 3: Línea recta (Haversine) como pre-filtro
-                decimal distanciaLineaRecta = CalcularDistanciaHaversine(
-                    viaje.OrigenLat, viaje.OrigenLng,
-                    envio.DestinoLat, envio.DestinoLng
-                );
+                //decimal distanciaLineaRecta = CalcularDistanciaHaversine(
+                //    viaje.OrigenLat, viaje.OrigenLng,
+                //    envio.DestinoLat, envio.DestinoLng
+                //);
 
                 // Si la línea recta ya supera el desvío máximo, descartar
-                if (distanciaLineaRecta > viaje.DesvioMaxKm)
+                //if (distanciaLineaRecta > viaje.DesvioMaxKm)
+                //    continue;
+
+                // Filtro 3: desvío en línea recta como prefiltro, con margen para no descartar de más.
+                var retiro = new CoordenadaDto(envio.OrigenLat, envio.OrigenLng);
+                var entrega = new CoordenadaDto(envio.DestinoLat, envio.DestinoLng);
+                decimal desvioRecto = GeoUtil.LongitudKm(InsercionRecorrido.Insertar(recorrido, retiro, entrega)) - largoHabitual;
+                if (desvioRecto > viaje.DesvioMaxKm * 1.5m)
                     continue;
 
                 candidatos.Add((envio, capacidadRestantePaquetes, capacidadRestanteKg));
@@ -81,12 +92,17 @@ namespace RuteaYa.API.Servicios
                 try
                 {
                     // Obtener detalles exactos de la ruta
-                    var detalleRuta = await _rutaServicio.ObtenerDetalleOportunidadAsync(
-                        viaje.OrigenDir,
-                        viaje.DestinoDir,
-                        envio.OrigenDir,
-                        envio.DestinoDir
-                    );
+                    //var detalleRuta = await _rutaServicio.ObtenerDetalleOportunidadAsync(
+                    //    viaje.OrigenDir,
+                    //    viaje.DestinoDir,
+                    //    envio.OrigenDir,
+                    //    envio.DestinoDir
+                    //);
+
+                    var detalleRuta = await _rutaServicio.CompararConEnvioAsync(
+                    RecorridoHabitual(viaje),
+                    new CoordenadaDto(envio.OrigenLat, envio.OrigenLng),
+                    new CoordenadaDto(envio.DestinoLat, envio.DestinoLng));
 
                     // Filtro 4: Desvío exacto no puede exceder límite del viaje
                     if (detalleRuta.DesvioKm > viaje.DesvioMaxKm)
@@ -144,12 +160,25 @@ namespace RuteaYa.API.Servicios
                 return null;
 
             // Obtener detalles de la ruta
-            var detalleRuta = await _rutaServicio.ObtenerDetalleOportunidadAsync(
-                viaje.OrigenDir,
-                viaje.DestinoDir,
-                envio.OrigenDir,
-                envio.DestinoDir
-            );
+            //var detalleRuta = await _rutaServicio.ObtenerDetalleOportunidadAsync(
+            //    viaje.OrigenDir,
+            //    viaje.DestinoDir,
+            //    envio.OrigenDir,
+            //    envio.DestinoDir
+            //);
+
+            var detalleRuta = await _rutaServicio.CompararConEnvioAsync(
+
+            RecorridoHabitual(viaje),
+            new CoordenadaDto(envio.OrigenLat, envio.OrigenLng),
+            new CoordenadaDto(envio.DestinoLat, envio.DestinoLng));
+
+            var usadas = viaje.Asignaciones ?? new List<Asignacion>();
+            detalleRuta.MontoPago = envio.Monto;
+            detalleRuta.PesoKg = envio.PesoKg;
+            detalleRuta.GananciaPorKmAdicional = detalleRuta.DesvioKm > 0 ? Math.Round(envio.Monto / detalleRuta.DesvioKm, 2) : 0;
+            detalleRuta.CapacidadRestantePaquetes = viaje.MaxPaquetes - usadas.Count - 1;
+            detalleRuta.CapacidadRestanteKg = viaje.PesoMaxKg - usadas.Sum(a => a.Envio?.PesoKg ?? 0) - envio.PesoKg;
 
             // Mapear envío a DTO
             var envioDto = new EnvioDto
@@ -203,12 +232,17 @@ namespace RuteaYa.API.Servicios
                     return ResultadoOperacion.Conflicto;
 
                 // Obtener detalles de ruta para validar desvío
-                var detalleRuta = await _rutaServicio.ObtenerDetalleOportunidadAsync(
-                    viaje.OrigenDir,
-                    viaje.DestinoDir,
-                    envio.OrigenDir,
-                    envio.DestinoDir
-                );
+                //var detalleRuta = await _rutaServicio.ObtenerDetalleOportunidadAsync(
+                //    viaje.OrigenDir,
+                //    viaje.DestinoDir,
+                //    envio.OrigenDir,
+                //    envio.DestinoDir
+                //);
+
+                var detalleRuta = await _rutaServicio.CompararConEnvioAsync(
+                RecorridoHabitual(viaje),
+                new CoordenadaDto(envio.OrigenLat, envio.OrigenLng),
+                new CoordenadaDto(envio.DestinoLat, envio.DestinoLng));
 
                 // Validar desvío
                 if (detalleRuta.DesvioKm > viaje.DesvioMaxKm)
@@ -221,7 +255,8 @@ namespace RuteaYa.API.Servicios
                     EnvioId = envio.Id,
                     DesvioKm = detalleRuta.DesvioKm,
                     TiempoExtraMin = detalleRuta.TiempoAdicionalMinutos,
-                    Ganancia = detalleRuta.MontoPago,
+                    //Ganancia = detalleRuta.MontoPago,
+                    Ganancia = envio.Monto,
                     AsignadoEn = DateTime.Now,
                     Envio = envio
                 };
@@ -278,5 +313,16 @@ namespace RuteaYa.API.Servicios
             double c = 2 * Math.Asin(Math.Sqrt(a));
             return (decimal)(radioTierra * c);
         }
+
+        private static List<CoordenadaDto> RecorridoHabitual(Viaje viaje)
+        {
+            var recorrido = new List<CoordenadaDto> { new(viaje.OrigenLat, viaje.OrigenLng) };
+            recorrido.AddRange(viaje.Paradas.OrderBy(p => p.Orden).Select(p => new CoordenadaDto(p.Lat, p.Lng)));
+            recorrido.Add(new CoordenadaDto(viaje.DestinoLat, viaje.DestinoLng));
+            return recorrido;
+        }
+
+
+
     }
 }

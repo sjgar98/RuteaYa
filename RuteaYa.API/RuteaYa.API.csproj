@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -7,6 +7,7 @@
     <!-- Comentarios /// de los controllers en Swagger -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>
+    <UserSecretsId>0d71fabc-7cae-4cb8-9097-53e7b021bc1c</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
