@@ -1,9 +1,10 @@
-using System.Globalization;
 using RuteaYa.API.Servicios.Interfaces;
 using RuteaYa.DTOs;
 using RuteaYa.DTOs.Enums;
+using RuteaYa.DTOs.Rutas;
 using RuteaYa.Entidades;
 using RuteaYa.Repositorios.Interfaces;
+using System.Globalization;
 
 namespace RuteaYa.API.Servicios
 {
@@ -144,17 +145,18 @@ namespace RuteaYa.API.Servicios
             }));
         }
 
-        // El servicio de rutas no distingue origen/destino de las paradas: recibe el recorrido completo en orden.
         private async Task CalcularRutaAsync(Viaje viaje)
         {
-            var recorrido = new List<string> { viaje.OrigenDir };
-            recorrido.AddRange(viaje.Paradas.OrderBy(p => p.Orden).Select(p => p.Direccion));
-            recorrido.Add(viaje.DestinoDir);
+            var recorrido = new List<CoordenadaDto> { new CoordenadaDto(viaje.OrigenLat, viaje.OrigenLng) };
+            recorrido.AddRange(viaje.Paradas.OrderBy(p => p.Orden).Select(p => new CoordenadaDto(p.Lat, p.Lng)));
+            recorrido.Add(new CoordenadaDto(viaje.DestinoLat, viaje.DestinoLng));
 
-            var ruta = await _rutaServicio.CalcularRutaConParadasAsync(recorrido);
+            var ruta = await _rutaServicio.CalcularRutaAsync(recorrido);
             viaje.DistanciaKm = ruta.DistanciaKm;
             viaje.DuracionMin = ruta.DuracionMinutos;
         }
+
+
 
         private static bool TieneEnviosPendientes(Viaje viaje)
         {

@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Microsoft.Extensions.Options;
 using RuteaYa.API.Servicios;
 using RuteaYa.API.Servicios.Interfaces;
 using RuteaYa.Entidades;
 using RuteaYa.Repositorios;
 using RuteaYa.Repositorios.Interfaces;
+using RuteaYa.API.Servicios.Rutas;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,7 +50,17 @@ builder.Services.AddScoped<IViajeServicio, ViajeServicio>();
 builder.Services.AddScoped<IUsuarioServicio, UsuarioServicio>();
 builder.Services.AddScoped<ITokenServicio, TokenServicio>();
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
-builder.Services.AddScoped<IRutaServicio, RutaServicioMock>();
+builder.Services.AddMemoryCache();
+builder.Services.Configure<RutasOpciones>(builder.Configuration.GetSection("Rutas"));
+builder.Services.AddScoped<RutaServicioMock>();
+builder.Services.AddHttpClient<RutaServicioGoogle>(cliente => cliente.Timeout = TimeSpan.FromSeconds(10));
+builder.Services.AddScoped<IRutaServicio>(sp =>
+{
+    var opciones = sp.GetRequiredService<IOptions<RutasOpciones>>().Value;
+    return opciones.UsarGoogle()
+        ? sp.GetRequiredService<RutaServicioGoogle>()
+        : sp.GetRequiredService<RutaServicioMock>();
+});
 builder.Services.AddScoped<IHistorialServicio, HistorialServicio>();
 builder.Services.AddScoped<IEnvioServicio, EnvioServicio>();
 builder.Services.AddScoped<ITransporteServicio, TransporteServicio>();
@@ -77,6 +89,8 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
+app.Logger.LogInformation("Servicio de rutas: {Proveedor}",
+    app.Services.GetRequiredService<IOptions<RutasOpciones>>().Value.UsarGoogle() ? "Google" : "Mock");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

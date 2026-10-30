@@ -8,20 +8,40 @@
     let marcadores = [];
     let numeroPedido = 0;
 
-    function coordenada(idLat, idLng) {
-        const lat = parseFloat(document.querySelector(idLat)?.value);
-        const lng = parseFloat(document.querySelector(idLng)?.value);
-        return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+    function mostrarEstado(texto) {
+        const elemento = document.getElementById('mapa-estado');
+        if (elemento) {
+            elemento.textContent = texto;
+        }
     }
 
-    function leerParadas() {
-        return Array.from(document.querySelectorAll('#paradas-lista li'))
-            .map(li => {
-                const lat = parseFloat(li.querySelector('input[name$=".Lat"]')?.value);
-                const lng = parseFloat(li.querySelector('input[name$=".Lng"]')?.value);
-                return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
-            })
-            .filter(Boolean);
+    function punto(lat, lng) {
+        const latitud = parseFloat(lat);
+        const longitud = parseFloat(lng);
+        return Number.isFinite(latitud) && Number.isFinite(longitud) ? { lat: latitud, lng: longitud } : null;
+    }
+
+    function leerRecorrido() {
+        // Detalle: los datos vienen incrustados en la vista.
+        const datosVista = document.getElementById('mapa-datos');
+        if (datosVista) {
+            const datos = JSON.parse(datosVista.textContent);
+            return {
+                origen: punto(datos.origen.lat, datos.origen.lng),
+                destino: punto(datos.destino.lat, datos.destino.lng),
+                paradas: datos.paradas.map(p => punto(p.lat, p.lng)).filter(Boolean)
+            };
+        }
+
+        const valor = selector => document.querySelector(selector)?.value;
+        return {
+            origen: punto(valor('#OrigenLat'), valor('#OrigenLng')),
+            destino: punto(valor('#DestinoLat'), valor('#DestinoLng')),
+            paradas: Array.from(document.querySelectorAll('#paradas-lista li'))
+                .map(li => punto(li.querySelector('input[name$=".Lat"]')?.value,
+                                 li.querySelector('input[name$=".Lng"]')?.value))
+                .filter(Boolean)
+        };
     }
 
     function limpiar() {
@@ -36,16 +56,16 @@
     }
 
     async function calcularRuta() {
-        const origen = coordenada('#OrigenLat', '#OrigenLng');
-        const destino = coordenada('#DestinoLat', '#DestinoLng');
-        const paradas = leerParadas();
+        const { origen, destino, paradas } = leerRecorrido();
         const pedido = ++numeroPedido;
 
         limpiar();
         if (!origen || !destino) {
+            mostrarEstado('Elegí origen y destino de la lista para ver la ruta.');
             return;
         }
 
+        mostrarEstado('Calculando ruta…');
         try {
             const { routes } = await Route.computeRoutes({
                 origin: origen,
@@ -55,8 +75,12 @@
                 fields: ['path', 'viewport']
             });
 
-            
-            if (pedido !== numeroPedido || !routes?.length) {
+           
+            if (pedido !== numeroPedido) {
+                return;
+            }
+            if (!routes?.length) {
+                mostrarEstado('No se encontró una ruta para este recorrido.');
                 return;
             }
 
@@ -71,8 +95,12 @@
             if (ruta.viewport) {
                 mapa.fitBounds(ruta.viewport);
             }
+            mostrarEstado('');
         } catch (error) {
             console.warn('No se pudo calcular la ruta:', error);
+            if (pedido === numeroPedido) {
+                mostrarEstado('No se pudo calcular la ruta. Probá de nuevo con "Actualizar ruta".');
+            }
         }
     }
 
@@ -93,7 +121,10 @@
             streetViewControl: false
         });
 
-        document.getElementById('form-viaje').addEventListener('ruta:cambio', calcularRuta);
-        calcularRuta(); 
+       
+        document.getElementById('form-viaje')?.addEventListener('ruta:cambio', calcularRuta);
+        document.getElementById('ruta-calcular')?.addEventListener('click', calcularRuta);
+
+        calcularRuta();
     };
 })();

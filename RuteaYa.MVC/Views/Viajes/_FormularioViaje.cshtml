@@ -120,9 +120,8 @@
             </div>
         </div>
 
-        <div class="col-12 mt-3">
-            <label class="form-label small fw-semibold">Vista previa de la ruta</label>
-            <div id="map" style="height: 350px; width: 100%; border-radius: 8px;" class="shadow-sm border"></div>
+         <div class="col-12 mt-3">
+            <partial name="_MapaRuta" />
         </div>
 
 
@@ -139,6 +138,4 @@
             }
         </div>
     </div>
-    <script src="~/js/mapa-viaje.js" asp-append-version="true"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=@Configuration["GoogleMaps:ApiKey"]&callback=initMapaViaje&loading=async" async defer></script>
 </form>
