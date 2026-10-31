@@ -10,7 +10,7 @@ using RuteaYa.Repositorios.Interfaces;
 namespace RuteaYa.API.Servicios
 {
     // Motor de compatibilidad: decide si un envío entra en un viaje (dueño, estado, fecha/día,
-    // capacidad, peso y desvío) y con qué datos. Lo usan Oportunidades, Detalle y Aceptar.
+    // capacidad, peso y desvío) y con qué datos. Lo usan Oportunidades, Detalle, Aceptar y el Optimizador.
     public class OportunidadesServicio : IOportunidadesServicio
     {
         // Desvío / desvío máximo del viaje hasta el cual un envío es "Muy compatible" o "Compatible".
@@ -73,7 +73,7 @@ namespace RuteaYa.API.Servicios
 
             foreach (var envio in envios)
             {
-                var evaluacion = await EvaluarAsync(viaje, envio, usuarioId, hoy, prefiltrar: true);
+                var evaluacion = await EvaluarInternoAsync(viaje, envio, usuarioId, hoy, prefiltrar: true);
                 if (evaluacion.Motivo != null)
                 {
                     continue;
@@ -119,7 +119,7 @@ namespace RuteaYa.API.Servicios
             }
 
             var hoy = Hoy();
-            var evaluacion = await EvaluarAsync(viaje, envio, usuarioId, hoy, prefiltrar: false);
+            var evaluacion = await EvaluarInternoAsync(viaje, envio, usuarioId, hoy, prefiltrar: false);
 
             // Sin fecha con lugar, la capacidad se muestra para la próxima salida del viaje (si existe).
             var fechaReferencia = evaluacion.Fecha ?? FechasDelViaje(viaje, hoy, envio.FechaLimite).Cast<DateOnly?>().FirstOrDefault();
@@ -176,7 +176,7 @@ namespace RuteaYa.API.Servicios
             }
 
             // Se revalida todo: entre que el conductor vio la oportunidad y la aceptó pudo cambiar algo.
-            var evaluacion = await EvaluarAsync(viaje, envio, usuarioId, Hoy(), prefiltrar: false);
+            var evaluacion = await EvaluarInternoAsync(viaje, envio, usuarioId, Hoy(), prefiltrar: false);
             if (evaluacion.Motivo != null)
             {
                 return ResultadoAsignacion.Conflicto(evaluacion.Motivo);
@@ -223,13 +223,20 @@ namespace RuteaYa.API.Servicios
             });
         }
 
+        // Expuesto para el Optimizador: evalúa si un envío ya cargado entra en el viaje dado.
+        // Usa prefiltrar: false porque el Optimizador ya tiene la lista filtrada de candidatos.
+        public async Task<EvaluacionOportunidad> EvaluarCompatibilidadAsync(Viaje viaje, Envio envio, int usuarioId, DateOnly hoy)
+        {
+            return await EvaluarInternoAsync(viaje, envio, usuarioId, hoy, prefiltrar: false);
+        }
+
         private const string MotivoNoDisponible = "El envío ya no está disponible.";
 
         // Aplica las reglas en orden y devuelve el primer motivo por el que el envío no entra en el viaje
         // (null si entra), la fecha en la que se llevaría y la comparación de rutas.
-        private async Task<Evaluacion> EvaluarAsync(Viaje viaje, Envio envio, int usuarioId, DateOnly hoy, bool prefiltrar)
+        private async Task<EvaluacionOportunidad> EvaluarInternoAsync(Viaje viaje, Envio envio, int usuarioId, DateOnly hoy, bool prefiltrar)
         {
-            var evaluacion = new Evaluacion();
+            var evaluacion = new EvaluacionOportunidad();
 
             if (!viaje.Activo)
             {
@@ -339,7 +346,7 @@ namespace RuteaYa.API.Servicios
         }
 
         // La capacidad es por salida: solo cuentan las asignaciones de esa fecha cuyo envío no se canceló.
-        private static (int Paquetes, decimal Kg) CapacidadRestante(Viaje viaje, DateOnly fecha)
+        internal static (int Paquetes, decimal Kg) CapacidadRestante(Viaje viaje, DateOnly fecha)
         {
             var ocupadas = viaje.Asignaciones
                 .Where(a => a.FechaViaje == fecha && a.Envio?.Estado != EstadoEnvio.Cancelado)
@@ -348,7 +355,7 @@ namespace RuteaYa.API.Servicios
             return (viaje.MaxPaquetes - ocupadas.Count, viaje.PesoMaxKg - ocupadas.Sum(a => a.Envio?.PesoKg ?? 0));
         }
 
-        private static (string Texto, decimal Puntuacion) CalcularCompatibilidad(decimal desvioKm, decimal desvioMaxKm)
+        internal static (string Texto, decimal Puntuacion) CalcularCompatibilidad(decimal desvioKm, decimal desvioMaxKm)
         {
             var proporcion = desvioMaxKm > 0 ? Math.Clamp(desvioKm / desvioMaxKm, 0, 1) : 1;
             var texto = proporcion <= UmbralMuyCompatible ? "Muy compatible"
@@ -379,7 +386,7 @@ namespace RuteaYa.API.Servicios
             return GeoUtil.LongitudKm(conEnvio) - GeoUtil.LongitudKm(recorrido);
         }
 
-        private static List<CoordenadaDto> RecorridoHabitual(Viaje viaje)
+        internal static List<CoordenadaDto> RecorridoHabitual(Viaje viaje)
         {
             var recorrido = new List<CoordenadaDto> { new(viaje.OrigenLat, viaje.OrigenLng) };
             recorrido.AddRange(viaje.Paradas.OrderBy(p => p.Orden).Select(p => new CoordenadaDto(p.Lat, p.Lng)));
@@ -388,22 +395,9 @@ namespace RuteaYa.API.Servicios
         }
 
         // "Hoy" en Argentina, independiente de la zona horaria del servidor (ver AGENTS 6.3).
-        private static DateOnly Hoy()
+        internal static DateOnly Hoy()
         {
             return DateOnly.FromDateTime(DateTime.UtcNow.Add(_offsetArgentina));
-        }
-
-        private class Evaluacion
-        {
-            public string? Motivo { get; set; }
-            public DateOnly? Fecha { get; set; }
-            public DetalleOportunidadRutaDto? Ruta { get; set; }
-
-            public Evaluacion ConMotivo(string motivo)
-            {
-                Motivo = motivo;
-                return this;
-            }
         }
     }
 }

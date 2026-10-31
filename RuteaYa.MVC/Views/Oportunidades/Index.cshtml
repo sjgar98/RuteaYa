@@ -28,7 +28,6 @@
     </div>
     @if (viaje != null && viaje.Activo)
     {
-        @* TODO Optimizador: el controller Optimizador todavía no existe (Pantalla 10). *@
         <a class="btn btn-dark btn-sm" asp-controller="Optimizador" asp-action="Index" asp-route-viajeId="@viaje.ViajeId">Optimizar combinación</a>
     }
 </div>

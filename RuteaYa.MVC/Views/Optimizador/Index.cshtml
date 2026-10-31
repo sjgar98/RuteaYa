@@ -1,0 +1,224 @@
+@model RuteaYa.DTOs.OptimizacionResultadoDto?
+@using RuteaYa.MVC.Helpers
+@{
+    ViewData["Title"] = "Optimizador";
+    var criterio = ViewData["Criterio"] as string ?? "ganancia";
+    var viajeId = (int?)ViewData["ViajeId"];
+
+    string ClaseCriterio(string c) => criterio == c ? "btn-dark" : "btn-outline-secondary";
+    string TextoCriterio(string c) => c switch
+    {
+        "desvio" => "Menor desvío",
+        "equilibrio" => "Equilibrio",
+        _ => "Mayor ganancia"
+    };
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div>
+        <h1 class="h3 mb-0">Optimizador</h1>
+        <p class="text-muted small mb-0">
+            @if (Model != null)
+            {
+                <text>@Model.OrigenDir → @Model.DestinoDir · hasta @Model.MaxPaquetes paquetes, @Model.PesoMaxKg.Numero() kg, @Model.DesvioMaxKm.Numero() km de desvío.</text>
+            }
+            else
+            {
+                <text>Encontrá la combinación de envíos que maximiza tu ganancia.</text>
+            }
+        </p>
+    </div>
+    @if (viajeId.HasValue)
+    {
+        <a class="btn btn-outline-secondary btn-sm"
+           asp-controller="Oportunidades" asp-action="Index" asp-route-viajeId="@viajeId">
+            ← Ver oportunidades
+        </a>
+    }
+</div>
+
+@if (TempData["Error"] is string error)
+{
+    <div class="alert alert-danger">
+        @error
+        @if (viajeId.HasValue)
+        {
+            <a class="alert-link ms-1" asp-action="Index" asp-route-viajeId="@viajeId" asp-route-criterio="@criterio">Recalcular</a>
+        }
+    </div>
+}
+
+@if (Model == null)
+{
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body text-center text-muted py-5">
+            <p class="mb-3">Necesitás un viaje activo para usar el optimizador.</p>
+            <a class="btn btn-dark btn-sm" asp-controller="Viajes" asp-action="Nuevo">Nuevo viaje</a>
+        </div>
+    </div>
+}
+else
+{
+    @* Selector de criterio *@
+    <nav class="d-flex align-items-center gap-2 mb-4">
+        <span class="small text-muted">Criterio</span>
+        <a class="btn btn-sm rounded-pill @ClaseCriterio("ganancia")"
+           asp-action="Index" asp-route-viajeId="@Model.ViajeId" asp-route-criterio="ganancia">Mayor ganancia</a>
+        <a class="btn btn-sm rounded-pill @ClaseCriterio("desvio")"
+           asp-action="Index" asp-route-viajeId="@Model.ViajeId" asp-route-criterio="desvio">Menor desvío</a>
+        <a class="btn btn-sm rounded-pill @ClaseCriterio("equilibrio")"
+           asp-action="Index" asp-route-viajeId="@Model.ViajeId" asp-route-criterio="equilibrio">Equilibrio</a>
+    </nav>
+
+    @* ── Combinación óptima ── *@
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-header bg-transparent border-0 pt-3 pb-0">
+            <h2 class="h5 mb-0">
+                Combinación óptima
+                <span class="badge bg-success ms-2">@TextoCriterio(criterio)</span>
+            </h2>
+        </div>
+
+        @if (Model.Optima.Envios.Count == 0)
+        {
+            <div class="card-body text-center text-muted py-5">
+                No hay ninguna combinación válida con los envíos disponibles para este viaje.
+                @if (Model.Descartados.Count > 0)
+                {
+                    <div class="small mt-1">Hay @Model.Descartados.Count envío(s) descartado(s). Revisá los motivos abajo.</div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="card-body">
+                @* Resumen de totales *@
+                <div class="row g-3 mb-3">
+                    <div class="col-6 col-md-3">
+                        <div class="border rounded-3 p-3 text-center h-100">
+                            <div class="text-success fw-bold fs-5">@Model.Optima.GananciaTotal.Moneda()</div>
+                            <div class="text-muted small">Ganancia total</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="border rounded-3 p-3 text-center h-100">
+                            <div class="fw-bold fs-5">@Model.Optima.CantidadPaquetes</div>
+                            <div class="text-muted small">Paquetes</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="border rounded-3 p-3 text-center h-100">
+                            <div class="fw-bold fs-5">@Model.Optima.PesoTotalKg.Numero() kg</div>
+                            <div class="text-muted small">Peso total</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="border rounded-3 p-3 text-center h-100">
+                            <div class="fw-bold fs-5">@Model.Optima.DesvioTotalKm.Numero() km</div>
+                            <div class="text-muted small">Desvío total</div>
+                        </div>
+                    </div>
+                </div>
+
+                @* Lista de envíos de la combinación óptima *@
+                <form asp-action="Confirmar" asp-route-viajeId="@Model.ViajeId" method="post">
+                    @Html.AntiForgeryToken()
+                    <ul class="list-group list-group-flush mb-3">
+                        @foreach (var envio in Model.Optima.Envios)
+                        {
+                            <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+                                <input type="hidden" name="envioIds" value="@envio.EnvioId" />
+                                <div>
+                                    <div class="fw-semibold">@envio.Origen → @envio.Destino</div>
+                                    <div class="text-muted small">
+                                        @envio.Descripcion · @envio.PesoKg.Numero() kg · desvío @envio.DesvioKm.Numero() km ·
+                                        @envio.FechaViaje.ToString("ddd dd/MM", System.Globalization.CultureInfo.GetCultureInfo("es-AR"))
+                                    </div>
+                                </div>
+                                <span class="fw-semibold text-success">@envio.MontoPago.Moneda()</span>
+                            </li>
+                        }
+                    </ul>
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a class="btn btn-outline-secondary"
+                           asp-action="Index" asp-route-viajeId="@Model.ViajeId" asp-route-criterio="@criterio">
+                            Recalcular
+                        </a>
+                        <button type="submit" class="btn btn-dark">
+                            Confirmar y reservar (@Model.Optima.CantidadPaquetes paquete@(Model.Optima.CantidadPaquetes != 1 ? "s" : ""))
+                        </button>
+                    </div>
+                </form>
+            </div>
+        }
+    </div>
+
+    @* ── Otras combinaciones válidas ── *@
+    @if (Model.OtrasCombinaciones.Count > 0)
+    {
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-transparent border-0 pt-3 pb-0">
+                <h2 class="h5 mb-0">Otras combinaciones válidas <span class="text-muted fw-normal small">(@Model.OtrasCombinaciones.Count)</span></h2>
+            </div>
+            <ul class="list-group list-group-flush rounded-4">
+                @foreach (var comb in Model.OtrasCombinaciones.Take(10))
+                {
+                    <li class="list-group-item py-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                            <div>
+                                <div class="fw-semibold text-success">@comb.GananciaTotal.Moneda()</div>
+                                <div class="text-muted small">
+                                    @comb.CantidadPaquetes paquete@(comb.CantidadPaquetes != 1 ? "s" : "") ·
+                                    @comb.PesoTotalKg.Numero() kg · desvío @comb.DesvioTotalKm.Numero() km
+                                </div>
+                            </div>
+                            <form asp-action="Confirmar" asp-route-viajeId="@Model.ViajeId" method="post">
+                                @Html.AntiForgeryToken()
+                                @foreach (var e in comb.Envios)
+                                {
+                                    <input type="hidden" name="envioIds" value="@e.EnvioId" />
+                                }
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">Confirmar esta</button>
+                            </form>
+                        </div>
+                        <ul class="mt-2 mb-0 ps-3">
+                            @foreach (var e in comb.Envios)
+                            {
+                                <li class="small text-muted">@e.Origen → @e.Destino · @e.PesoKg.Numero() kg · @e.MontoPago.Moneda()</li>
+                            }
+                        </ul>
+                    </li>
+                }
+                @if (Model.OtrasCombinaciones.Count > 10)
+                {
+                    <li class="list-group-item text-muted small text-center py-2">
+                        Y @(Model.OtrasCombinaciones.Count - 10) combinaciones más…
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+
+    @* ── Envíos descartados ── *@
+    @if (Model.Descartados.Count > 0)
+    {
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-transparent border-0 pt-3 pb-0">
+                <h2 class="h5 mb-0">Envíos descartados <span class="text-muted fw-normal small">(@Model.Descartados.Count)</span></h2>
+            </div>
+            <ul class="list-group list-group-flush rounded-4">
+                @foreach (var d in Model.Descartados)
+                {
+                    <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+                        <div>
+                            <div class="fw-semibold">@d.Origen → @d.Destino</div>
+                            <div class="text-muted small">@d.Descripcion · @d.PesoKg.Numero() kg · @d.MontoPago.Moneda()</div>
+                        </div>
+                        <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis">@d.Motivo</span>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+}
+
