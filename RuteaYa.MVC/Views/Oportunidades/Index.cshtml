@@ -1,110 +1,127 @@
-@model List<RuteaYa.DTOs.OportunidadDto>
-
+@model RuteaYa.MVC.Models.OportunidadesViewModel
 @{
-    ViewData["Title"] = "Oportunidades de Envíos";
+    ViewData["Title"] = "Oportunidades";
+
+    var viaje = Model.Viaje;
+    string ClaseOrden(string orden) => Model.OrdenarPor == orden ? "btn-dark" : "btn-outline-secondary";
+    string ClaseCompatibilidad(string compatibilidad) => compatibilidad switch
+    {
+        "Muy compatible" => "bg-success-subtle text-success-emphasis",
+        "Compatible" => "bg-info-subtle text-info-emphasis",
+        _ => "bg-warning-subtle text-warning-emphasis"
+    };
 }
 
-<div class="container mt-4">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>Oportunidades de Envíos</h1>
-            <p class="text-muted">Envíos compatibles con tu viaje</p>
-        </div>
-        <div class="col-md-4 text-end">
-            <a href="@Url.Action("Index", "Viajes")" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Volver a Mis Viajes
-            </a>
-        </div>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div>
+        <h1 class="h3 mb-0">Oportunidades</h1>
+        <p class="text-muted small mb-0">
+            @if (viaje != null)
+            {
+                <text>Envíos compatibles con @viaje.OrigenDir → @viaje.DestinoDir.</text>
+            }
+            else
+            {
+                <text>Envíos compatibles con tus viajes.</text>
+            }
+        </p>
     </div>
-
-    @if (TempData["Mensaje"] != null)
+    @if (viaje != null && viaje.Activo)
     {
-        <div class="alert alert-@(TempData["Tipo"]?.ToString() == "error" ? "danger" : "success") alert-dismissible fade show" role="alert">
-            @TempData["Mensaje"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-
-    @if (!Model.Any())
-    {
-        <div class="alert alert-info">
-            <p>No hay oportunidades disponibles en este momento.</p>
-            <p class="mb-0 small">Los envíos deben cumplir con la capacidad de peso y cantidad, así como no exceder el desvío máximo permitido.</p>
-        </div>
-    }
-    else
-    {
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label for="ordenarPor" class="form-label">Ordenar por:</label>
-                <select class="form-select" id="ordenarPor" onchange="cambiarOrdenamiento(this.value)">
-                    <option value="ganancia" selected>Ganancia (Mayor a menor)</option>
-                    <option value="desvio">Desvío (Menor a mayor)</option>
-                    <option value="compatibilidad">Compatibilidad</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead class="table-light">
-                    <tr>
-                        <th>Origen</th>
-                        <th>Destino</th>
-                        <th>Peso (kg)</th>
-                        <th>Desvío (km)</th>
-                        <th>Ganancia ($)</th>
-                        <th>Compatibilidad</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var oportunidad in Model)
-                    {
-                        <tr>
-                            <td>
-                                <small>@oportunidad.Origen</small>
-                            </td>
-                            <td>
-                                <small>@oportunidad.Destino</small>
-                            </td>
-                            <td>
-                                <strong>@oportunidad.PesoKg.ToString("F2")</strong>
-                            </td>
-                            <td>
-                                @oportunidad.DesvioKm.ToString("F2")
-                            </td>
-                            <td>
-                                <strong class="text-success">$@oportunidad.MontoPago.ToString("F2")</strong>
-                            </td>
-                            <td>
-                                @{
-                                    var badgeClass = oportunidad.Compatibilidad switch
-                                    {
-                                        "Muy compatible" => "bg-success",
-                                        "Compatible" => "bg-info",
-                                        _ => "bg-warning"
-                                    };
-                                }
-                                <span class="badge @badgeClass">@oportunidad.Compatibilidad</span>
-                            </td>
-                            <td>
-                                <a href="@Url.Action("Detalle", new { viajeId = (int)ViewData["ViajeId"], envioId = oportunidad.EnvioId })" 
-                                   class="btn btn-sm btn-primary">
-                                    Ver Detalle
-                                </a>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+        @* TODO Optimizador: el controller Optimizador todavía no existe (Pantalla 10). *@
+        <a class="btn btn-dark btn-sm" asp-controller="Optimizador" asp-action="Index" asp-route-viajeId="@viaje.ViajeId">Optimizar combinación</a>
     }
 </div>
 
-<script>
-    function cambiarOrdenamiento(valor) {
-        const viajeId = @Html.Raw((int)ViewData["ViajeId"]);
-        window.location.href = `@Url.Action("Index")?viajeId=${viajeId}&ordenarPor=${valor}`;
+@if (ViewData["Error"] is string error)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+@if (viaje == null)
+{
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body text-center text-muted py-5">
+            <p class="mb-3">Necesitás un viaje activo para buscar oportunidades.</p>
+            <a class="btn btn-dark btn-sm" asp-controller="Viajes" asp-action="Nuevo">Nuevo viaje</a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <form method="get" asp-action="Index" class="d-flex align-items-center gap-2" id="form-viaje">
+            <label for="viajeId" class="small text-muted text-nowrap">Viaje</label>
+            <select class="form-select form-select-sm" id="viajeId" name="viajeId">
+                @if (!Model.Viajes.Any(v => v.Id == viaje.ViajeId))
+                {
+                    <option value="@viaje.ViajeId" selected>@viaje.OrigenDir → @viaje.DestinoDir (inactivo)</option>
+                }
+                @foreach (var v in Model.Viajes)
+                {
+                    <option value="@v.Id" selected="@(v.Id == viaje.ViajeId)">
+                        @v.OrigenDir → @v.DestinoDir · @string.Join(", ", v.Dias.Select(d => d.Abreviar())) @v.HoraSalida.ToString("HH:mm")
+                    </option>
+                }
+            </select>
+            <input type="hidden" name="ordenarPor" value="@Model.OrdenarPor" />
+            <noscript><button type="submit" class="btn btn-outline-secondary btn-sm">Ver</button></noscript>
+        </form>
+
+        <nav class="d-flex align-items-center gap-2">
+            <span class="small text-muted">Ordenar por</span>
+            <a class="btn btn-sm rounded-pill @ClaseOrden("ganancia")" asp-action="Index" asp-route-viajeId="@viaje.ViajeId" asp-route-ordenarPor="ganancia">Ganancia</a>
+            <a class="btn btn-sm rounded-pill @ClaseOrden("desvio")" asp-action="Index" asp-route-viajeId="@viaje.ViajeId" asp-route-ordenarPor="desvio">Desvío</a>
+            <a class="btn btn-sm rounded-pill @ClaseOrden("compatibilidad")" asp-action="Index" asp-route-viajeId="@viaje.ViajeId" asp-route-ordenarPor="compatibilidad">Compatibilidad</a>
+        </nav>
+    </div>
+
+    @if (!viaje.Activo)
+    {
+        <div class="alert alert-warning">
+            Este viaje está inactivo, así que no recibe oportunidades.
+            <a class="alert-link" asp-controller="Viajes" asp-action="Detalle" asp-route-id="@viaje.ViajeId">Ver viaje</a>
+        </div>
     }
-</script>
+
+    <div class="card border-0 shadow-sm rounded-4">
+        @if (viaje.Oportunidades.Count == 0)
+        {
+            <div class="card-body text-center text-muted py-5">
+                No hay envíos compatibles con este viaje por ahora.
+                <div class="small mt-1">
+                    Tienen que salir en un día del viaje antes de su fecha límite, entrar en el lugar libre
+                    (@viaje.MaxPaquetes paquetes, @viaje.PesoMaxKg.Numero() kg) y no superar @viaje.DesvioMaxKm.Numero() km de desvío.
+                </div>
+            </div>
+        }
+        else
+        {
+            <ul class="list-group list-group-flush rounded-4">
+                @foreach (var o in viaje.Oportunidades)
+                {
+                    <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+                        <div>
+                            <div class="fw-semibold">@o.Origen → @o.Destino</div>
+                            <div class="text-muted small">
+                                @o.Descripcion · @o.PesoKg.Numero() kg · desvío @o.DesvioKm.Numero() km · @o.FechaViaje.ToString("ddd dd/MM", System.Globalization.CultureInfo.GetCultureInfo("es-AR"))
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <span class="badge rounded-pill @ClaseCompatibilidad(o.Compatibilidad)">@o.Compatibilidad</span>
+                            <span class="fw-semibold text-success oportunidad-monto">@o.MontoPago.Moneda()</span>
+                            <a class="btn btn-outline-secondary btn-sm" asp-action="Detalle" asp-route-viajeId="@viaje.ViajeId" asp-route-envioId="@o.EnvioId">Ver detalle</a>
+                            <form asp-action="Aceptar" asp-route-viajeId="@viaje.ViajeId" asp-route-envioId="@o.EnvioId" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-dark btn-sm">Aceptar</button>
+                            </form>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/oportunidades.js" asp-append-version="true"></script>
+}

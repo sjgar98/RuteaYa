@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc;
 using RuteaYa.DTOs;
+using RuteaYa.MVC.Models;
 using RuteaYa.MVC.Servicios.Interfaces;
 
 namespace RuteaYa.MVC.Servicios
@@ -14,83 +16,45 @@ namespace RuteaYa.MVC.Servicios
             _http = http;
         }
 
-        public async Task<List<OportunidadDto>> ObtenerOportunidadesAsync(int viajeId, string? ordenarPor = "ganancia")
+        public async Task<OportunidadesViajeDto?> ListarAsync(int viajeId, string ordenarPor)
         {
-            var url = string.IsNullOrEmpty(ordenarPor) 
-                ? $"api/oportunidades/{viajeId}"
-                : $"api/oportunidades/{viajeId}?ordenarPor={Uri.EscapeDataString(ordenarPor)}";
-
-            try
-            {
-                return await _http.GetFromJsonAsync<List<OportunidadDto>>(url) ?? new List<OportunidadDto>();
-            }
-            catch
-            {
-                // Si falla, retornar lista vacía para que la vista lo maneje
-                return new List<OportunidadDto>();
-            }
-        }
-
-        public async Task<DetalleOportunidadDto?> ObtenerDetalleAsync(int viajeId, int envioId)
-        {
-            var url = $"api/oportunidades/{viajeId}/detalle?envioId={envioId}";
-
-            var respuesta = await _http.GetAsync(url);
-
+            var respuesta = await _http.GetAsync($"api/oportunidades/{viajeId}?ordenarPor={Uri.EscapeDataString(ordenarPor)}");
             if (respuesta.StatusCode == HttpStatusCode.NotFound)
             {
                 return null;
             }
 
-            if (!respuesta.IsSuccessStatusCode)
+            respuesta.EnsureSuccessStatusCode();
+            return await respuesta.Content.ReadFromJsonAsync<OportunidadesViajeDto>();
+        }
+
+        public async Task<DetalleOportunidadDto?> ObtenerDetalleAsync(int viajeId, int envioId)
+        {
+            var respuesta = await _http.GetAsync($"api/oportunidades/{viajeId}/detalle?envioId={envioId}");
+            if (respuesta.StatusCode == HttpStatusCode.NotFound)
             {
                 return null;
             }
 
+            respuesta.EnsureSuccessStatusCode();
             return await respuesta.Content.ReadFromJsonAsync<DetalleOportunidadDto>();
         }
 
         public async Task<ResultadoAceptarOportunidad> AceptarAsync(int viajeId, int envioId)
         {
-            var dto = new AceptarOportunidadDto { EnvioId = envioId };
-            var url = $"api/oportunidades/{viajeId}/aceptar";
-
-            var respuesta = await _http.PostAsJsonAsync(url, dto);
+            var respuesta = await _http.PostAsJsonAsync($"api/oportunidades/{viajeId}/aceptar", new AceptarOportunidadDto { EnvioId = envioId });
 
             switch (respuesta.StatusCode)
             {
-                case HttpStatusCode.Created:
-                    return new ResultadoAceptarOportunidad { Exitoso = true };
-
                 case HttpStatusCode.NotFound:
                     return new ResultadoAceptarOportunidad { NoEncontrado = true };
-
                 case HttpStatusCode.Conflict:
-                    // Intentar leer el mensaje de conflicto
-                    var conflictoMsg = "No se pudo aceptar la oportunidad por un conflicto.";
-                    try
-                    {
-                        var contenido = await respuesta.Content.ReadFromJsonAsync<dynamic>();
-                        if (contenido?.mensaje != null)
-                            conflictoMsg = contenido.mensaje;
-                    }
-                    catch { }
-                    return new ResultadoAceptarOportunidad { Conflicto = conflictoMsg };
-
-                case HttpStatusCode.BadRequest:
-                    var badRequestMsg = "Datos inválidos o conflicto de capacidad/desvío.";
-                    try
-                    {
-                        var contenido = await respuesta.Content.ReadFromJsonAsync<dynamic>();
-                        if (contenido?.mensaje != null)
-                            badRequestMsg = contenido.mensaje;
-                    }
-                    catch { }
-                    return new ResultadoAceptarOportunidad { Conflicto = badRequestMsg };
-
-                default:
-                    return new ResultadoAceptarOportunidad { Conflicto = "Error desconocido al aceptar la oportunidad." };
+                    var problema = await respuesta.Content.ReadFromJsonAsync<ProblemDetails>();
+                    return new ResultadoAceptarOportunidad { Conflicto = problema?.Title ?? "No se pudo aceptar la oportunidad." };
             }
+
+            respuesta.EnsureSuccessStatusCode();
+            return new ResultadoAceptarOportunidad();
         }
     }
 }

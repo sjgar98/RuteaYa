@@ -60,12 +60,12 @@ namespace RuteaYa.MVC.Helpers
         {
             return estado switch
             {
-                EstadoEnvio.BuscandoConductor => "text-bg-warning-subtle text-warning-emphasis",
+                EstadoEnvio.BuscandoConductor => "bg-warning-subtle text-warning-emphasis",
                 EstadoEnvio.ConductorAsignado => "text-bg-light border",
                 EstadoEnvio.Retirado => "text-bg-light border",
-                EstadoEnvio.EnCamino => "text-bg-info-subtle text-info-emphasis",
-                EstadoEnvio.Entregado => "text-bg-success-subtle text-success-emphasis",
-                _ => "text-bg-danger-subtle text-danger-emphasis"
+                EstadoEnvio.EnCamino => "bg-info-subtle text-info-emphasis",
+                EstadoEnvio.Entregado => "bg-success-subtle text-success-emphasis",
+                _ => "bg-danger-subtle text-danger-emphasis"
             };
         }
         private static readonly TimeZoneInfo _zonaArgentina = TimeZoneInfo.CreateCustomTimeZone(
