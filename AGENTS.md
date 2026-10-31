@@ -185,7 +185,7 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 | 12 | Mis transportes | ✅ `GET api/transportes`, ✅ `POST api/transportes/{asignacionId}/retirado`, `/en-camino`, `/entregado` (204 / 404 / 409) | ✅ `TransportesController.Index` (acciones condicionadas por `PuedeMarcarRetirado/EnCamino/Entregado`) | ✅ |
 | 13 | Historial | ✅ `GET api/historial?desde=&hasta=&orden=&estado=` (viajes con envios entregados, orden por fecha/monto) | 🟡 `HistorialController.Index` + `Views/Historial/Index` (KPIs, filtros por fecha/orden, link a detalle de viaje) | 🟡 Falta cubrir estados/tipos adicionales y tests unitarios del servicio |
 | 14 | Potencial mensual (req. para 10) | ❌ `GET api/potencial?mes=yyyy-MM&criterio=` (`ganancia`, `desvio` o `equilibrio`) | ❌ | ❌ |
-| — | Servicio de rutas/mapas | ✅ `IRutaServicio` con coordenadas (`CalcularRutaAsync`, `CompararConEnvioAsync`) + `RutaServicioGoogle` (Routes API, caché) + `RutaServicioMock`, elegidas por `Rutas:Proveedor`. `RutasController` conserva endpoints de texto (legado) . RutaServicioConRespaldo (decorador): si Google falla responde con el mock y loguea un warning | — | 🟡 Google funcionando y mock sin key o como respaldo si Google falla; lo usan `ViajeServicio` (distancia/duración) y `OportunidadesServicio` (desvío). Falta: borrar los métodos de texto (usan Geocoding, que exige facturación), test de `RutasOpciones.UsarGoogle()` y direcciones reales (hoy lista fija) |
+| — | Servicio de rutas/mapas | ✅ `IRutaServicio` con coordenadas (`CalcularRutaAsync`, `CompararConEnvioAsync`) + `RutaServicioGoogle` (Routes API, caché) + `RutaServicioMock`, elegidas por `Rutas:Proveedor`. RutaServicioConRespaldo (decorador): si Google falla responde con el mock y loguea un warning | — | 🟡 Google funcionando y mock sin key o como respaldo si Google falla; lo usan `ViajeServicio` (distancia/duración) y `OportunidadesServicio` (desvío).   Falta: direcciones reales (hoy lista fija). `GeocodificarDireccionAsync` sigue en la interfaz pero nadie la usa (Geocoding exige facturación) |
 | — | Máquina de estados de envío | ✅ `EnvioEstadoMaquina` (estática, `API/Servicios/`): única fuente de verdad de las transiciones de `EstadoEnvio` (ver 4.1) | — | ✅ Usada por Cancelar (Pantalla 7) y retirado/en camino/entregado (Pantalla 12); falta agregar la transición `BuscandoConductor → ConductorAsignado` cuando se implemente Confirmación (Pantalla 11) |
 | — | Layout con sidebar | — | ✅ `_Layout.cshtml` + `_MenuLateral.cshtml` (secciones → `/<Controller>`, activa según el controller actual) + `_MenuUsuario.cshtml` (nombre, email, Cerrar sesión). En celulares el menú es un offcanvas | ✅ Controllers esperados: `Envios` ✅, `Oportunidades` ✅, `Optimizador` ❌, `Transportes` ✅, `Historial` ✅, `Potencial` ❌ (acción `Index`); si se usa otro nombre, cambiarlo en `_MenuLateral` |
 | — | Tests unitarios por endpoint | — | — | 🟡 `UsuarioServicio`, `ViajeServicio.ObtenerDetalleAsync`, `CrearAsync` (cálculo de ruta) y `ActualizarAsync`; `EnvioServicioTests` (listar, detalle, cancelar con todas las transiciones de `EnvioEstadoMaquina`, crear) y `TransporteServicioTests` (listar, marcar retirado/en camino/entregado con cobertura de "sin saltear estados") completos. Oportunidades sin tests unitarios aún ; rutas: `RutasTests` (inserción del recorrido, `PolylineCodec`, mock y `GeoUtil`), `RutaServicioGoogleTests` (parseo, caché, errores, comparación y geocoding con `HttpMessageHandler` falso) y `RutaServicioConRespaldoTests` (respaldo al mock y pausa ante fallas de red)|
@@ -230,9 +230,8 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
   poner `Rutas:RespaldoAlMock = false`.
 - La key del servidor es **distinta** de la del mapa: sin restricción de sitios web y solo con Routes API.
   **No usar Geocoding API** (exige facturación; el proyecto de Google es un Maps Demo Project sin cuenta de
-  facturación, así que no se puede cobrar). Por eso los métodos de texto (`GeocodificarDireccionAsync`,
-  `CalcularRutaConParadasAsync`, `CalcularRutaAlternativaEnvioAsync`, `CalcularDesvioAsync`,
-  `ObtenerDetalleOportunidadAsync`) son legado y fallan con Google: usar siempre los de coordenadas.
+  facturación, así que no se puede cobrar).   Por eso la interfaz solo expone métodos con coordenadas (se quitaron los de texto
+  y `RutasController`). `GeocodificarDireccionAsync` quedó pero sin uso: con Google necesita Geocoding API.
 - `ViajeServicio` calcula `Viaje.DistanciaKm/DuracionMin` al crear y editar con `CalcularRutaAsync`, pasando
   las coordenadas del recorrido completo en orden. `OportunidadesServicio` usa `CompararConEnvioAsync`.
 - Direcciones: `ViajeServicio.BuscarDireccionesAsync` filtra una lista fija de 12 barrios (con coordenadas) y
@@ -252,10 +251,8 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
   en lugar del mapa y el resto del formulario funciona.
 
 **Pendiente**
-- Tests de `RutasOpciones.UsarGoogle()`.
 - Con `Rutas:RespaldoAlMock = false` y Google caído, Oportunidades muestra la lista vacía: el `catch` de 
   `OportunidadesServicio` descarta cada envío sin avisar (sugerir a Seba que al menos loguee un warning).
-- Borrar los métodos de texto de `IRutaServicio` y migrar `RutasController`.
 - Buscador de direcciones real (hoy lista fija).
 
 ### 6.3 Zona horaria
