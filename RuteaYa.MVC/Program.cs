@@ -4,6 +4,7 @@ using RuteaYa.MVC.Filtros;
 using RuteaYa.MVC.Servicios;
 using RuteaYa.MVC.Servicios.Interfaces;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -40,6 +41,12 @@ builder.Services.AddHttpClient<IHistorialServicio, HistorialServicio>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["ApiUrl"]!);
 }).AddHttpMessageHandler<TokenHandler>();
+
+builder.Services.AddHttpClient<RuteaYa.MVC.Servicios.Interfaces.IPotencialServicio, RuteaYa.MVC.Servicios.PotencialServicio>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ApiUrl"]!);
+})
+.AddHttpMessageHandler<TokenHandler>();
 
 var app = builder.Build();
 

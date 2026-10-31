@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using RuteaYa.API.Servicios;
 using RuteaYa.API.Servicios.Interfaces;
+using RuteaYa.API.Servicios.Simulados;
 using RuteaYa.Entidades;
 using RuteaYa.Repositorios;
 using RuteaYa.Repositorios.Interfaces;
@@ -17,7 +18,7 @@ using var db = new RuteaYaDbContext();
 db.Database.Migrate();
 
 //Esto lo agrege xq no queria tocar cosas de las migraciones en la base de datos)? le tengo respeto 
-//await InicializadorDatos.InicializarAsync(db);
+await InicializadorDatos.InicializarAsync(db);
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -50,6 +51,7 @@ builder.Services.AddScoped<ITokenServicio, TokenServicio>();
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 builder.Services.AddScoped<IRutaServicio, RutaServicioMock>();
 builder.Services.AddScoped<IHistorialServicio, HistorialServicio>(); // <-- Agregado aquí
+builder.Services.AddScoped<IPotencialServicio, PotencialSimuladoServicio>();
 
 builder.Services.AddDbContext<RuteaYaDbContext>();
 

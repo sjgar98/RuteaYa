@@ -1,0 +1,135 @@
+@model RuteaYa.DTOs.PotencialDto
+@{
+    ViewData["Title"] = "Potencial Mensual";
+    var mesActual = ViewBag.MesSeleccionado as string ?? DateTime.Now.ToString("yyyy-MM");
+    var criterioActual = ViewBag.CriterioSeleccionado as string ?? "ganancia";
+}
+
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark">Potencial de Ganancias Mensual</h2>
+            <p class="text-muted">Estimación basada en tus viajes recurrentes y las oportunidades disponibles.</p>
+        </div>
+        <div>
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fs-6">
+                Ganancia Potencial Estimada
+            </span>
+        </div>
+    </div>
+
+    <!-- Filtros de Mes y Criterio -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small text-muted fw-semibold">Seleccionar Mes</label>
+                <input type="month" name="mes" value="@mesActual" class="form-control rounded-3" />
+            </div>
+            <div class="col-md-5">
+                <label class="form-label small text-muted fw-semibold">Criterio de Optimización</label>
+                <select name="criterio" class="form-select rounded-3">
+                    <option value="ganancia" selected="@(criterioActual == "ganancia")">Maximizar ganancias</option>
+                    <option value="desvio" selected="@(criterioActual == "desvio")">Minimizar desvíos</option>
+                    <option value="equilibrio" selected="@(criterioActual == "equilibrio")">Equilibrio (Ganancia / Desvío)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-dark rounded-3 w-100">Calcular Potencial</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tarjetas de Resumen de Métricas -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3">
+                <span class="text-muted small">Viajes analizados</span>
+                <h3 class="fw-bold mb-0 text-dark">@Model.ViajesAnalizados</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3">
+                <span class="text-muted small">Paquetes posibles</span>
+                <h3 class="fw-bold mb-0 text-dark">@Model.PaquetesPosibles</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-light border-success">
+                <span class="text-success small fw-semibold">Ganancia potencial</span>
+                <h3 class="fw-bold mb-0 text-success">@Model.GananciaPotencial.Moneda()</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3">
+                <span class="text-muted small">Promedio por viaje</span>
+                <h3 class="fw-bold mb-0 text-dark">@Model.PromedioPorViaje.Moneda()</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Métricas Secundarias (Semana y Mejor Recorrido) -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 p-3">
+                <span class="text-muted small">Ganancia estimada por semana</span>
+                <h4 class="fw-bold mb-0 text-dark">@Model.GananciaPorSemana.Moneda()</h4>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm rounded-4 p-3">
+                <span class="text-muted small">Mejor recorrido identificado</span>
+                <h4 class="fw-bold mb-0 text-dark text-truncate">@Model.MejorRecorrido</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detalle que justifica la estimación -->
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-header bg-white border-0 pt-4 px-4">
+            <h5 class="fw-bold mb-0">Detalle de Oportunidades por Viaje (Justificación)</h5>
+        </div>
+        <div class="card-body p-0">
+            @if (Model.DetalleViajes != null && Model.DetalleViajes.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-uppercase fs-7 text-muted">
+                            <tr>
+                                <th class="ps-4">Fecha</th>
+                                <th>Recorrido del Viaje</th>
+                                <th>Paquetes Asignados</th>
+                                <th>Peso Total</th>
+                                <th>Desvío</th>
+                                <th class="pe-4 text-end">Ganancia Estimada</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.DetalleViajes)
+                            {
+                                <tr>
+                                    <td class="ps-4 fw-semibold">@item.FechaOcurrencia.ToString("dd/MM/yyyy")</td>
+                                    <td>@item.ViajeDescripcion</td>
+                                    <td>
+                                        <span class="badge bg-secondary-subtle text-secondary rounded-pill">@item.CantidadPaquetes paquetes</span>
+                                        <div class="small text-muted text-truncate" style="max-width: 250px;">
+                                            @string.Join(", ", item.PaquetesAsignados)
+                                        </div>
+                                    </td>
+                                    <td>@item.PesoTotalKg.Numero() kg</td>
+                                    <td>@item.DesvioTotalKm.Numero() km</td>
+                                    <td class="pe-4 text-end fw-bold text-success">@item.GananciaEstimada.Moneda()</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <p class="text-muted mb-0">No se encontraron viajes recurrentes u oportunidades disponibles para el mes seleccionado.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
