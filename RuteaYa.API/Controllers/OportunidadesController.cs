@@ -20,44 +20,45 @@ namespace RuteaYa.API.Controllers
         }
 
         /// <summary>
-        /// Lista los envíos compatibles (oportunidades) para un viaje del usuario autenticado.
+        /// Lista los envíos compatibles (oportunidades) con un viaje del usuario autenticado: disponibles,
+        /// de otros usuarios, con una salida del viaje antes de su fecha límite que tenga lugar
+        /// (paquetes y peso) y con un desvío dentro del máximo del viaje.
         /// </summary>
-        /// <param name="viajeId">ID del viaje</param>
-        /// <param name="ordenarPor">Criterio de ordenamiento: "ganancia" (default), "desvio" o "compatibilidad"</param>
-        /// <response code="200">Lista de oportunidades ordenadas</response>
-        /// <response code="404">El viaje no existe o pertenece a otro usuario</response>
-        /// <response code="401">No autenticado</response>
+        /// <param name="viajeId">ID del viaje.</param>
+        /// <param name="ordenarPor">"ganancia" (default), "desvio" o "compatibilidad". Los empates se ordenan por la otra métrica.</param>
+        /// <response code="200">Datos del viaje y oportunidades ordenadas (vacía si el viaje está inactivo).</response>
+        /// <response code="404">El viaje no existe o pertenece a otro usuario.</response>
         [HttpGet("{viajeId:int}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult<List<OportunidadDto>>> Listar(int viajeId, [FromQuery] string? ordenarPor = "ganancia")
+        public async Task<ActionResult<OportunidadesViajeDto>> Listar(int viajeId, [FromQuery] string? ordenarPor = "ganancia")
         {
-            var usuarioId = User.ObtenerUsuarioId();
+            var resultado = await _oportunidadesServicio.ListarAsync(User.ObtenerUsuarioId(), viajeId, ordenarPor);
+            if (resultado == null)
+            {
+                return NotFound();
+            }
 
-            var oportunidades = await _oportunidadesServicio.ObtenerOportunidadesAsync(viajeId, ordenarPor);
-
-            return Ok(oportunidades);
+            return Ok(resultado);
         }
 
         /// <summary>
-        /// Obtiene el detalle completo de una oportunidad (envío compatible con un viaje).
-        /// Incluye información de la ruta habitual vs. con el envío.
+        /// Detalle de una oportunidad: ruta habitual vs. con el envío, desvío, tiempos, pago, ganancia por km
+        /// adicional y capacidad restante. Si las restricciones dejaron de cumplirse, PuedeAceptar es false
+        /// y Motivo explica por qué.
         /// </summary>
-        /// <param name="viajeId">ID del viaje</param>
-        /// <param name="envioId">ID del envío</param>
-        /// <response code="200">Detalle de la oportunidad</response>
-        /// <response code="404">El viaje o envío no existen</response>
-        /// <response code="401">No autenticado</response>
+        /// <param name="viajeId">ID del viaje.</param>
+        /// <param name="envioId">ID del envío.</param>
+        /// <response code="200">Detalle de la oportunidad.</response>
+        /// <response code="404">El viaje no es del usuario, o el envío no existe, es propio o ya no busca conductor.</response>
         [HttpGet("{viajeId:int}/detalle")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<DetalleOportunidadDto>> Detalle(int viajeId, [FromQuery] int envioId)
         {
-            var usuarioId = User.ObtenerUsuarioId();
-
-            var detalle = await _oportunidadesServicio.ObtenerDetalleAsync(viajeId, envioId);
+            var detalle = await _oportunidadesServicio.ObtenerDetalleAsync(User.ObtenerUsuarioId(), viajeId, envioId);
             if (detalle == null)
             {
                 return NotFound();
@@ -67,44 +68,30 @@ namespace RuteaYa.API.Controllers
         }
 
         /// <summary>
-        /// Acepta una oportunidad: asigna un envío a un viaje del usuario autenticado.
-        /// Crea la asignación en la base de datos.
+        /// Acepta una oportunidad: revalida las restricciones, asigna el envío al viaje en la primera salida
+        /// con lugar y pasa el envío a "Conductor asignado".
         /// </summary>
-        /// <param name="viajeId">ID del viaje</param>
-        /// <param name="dto">DTO con el ID del envío a aceptar</param>
-        /// <response code="201">Envío asignado correctamente</response>
-        /// <response code="400">Datos inválidos o conflicto de capacidad/desvío</response>
-        /// <response code="404">El viaje o envío no existen</response>
-        /// <response code="409">El envío ya fue asignado o no está disponible</response>
-        /// <response code="401">No autenticado</response>
+        /// <param name="viajeId">ID del viaje.</param>
+        /// <param name="dto">Envío a aceptar.</param>
+        /// <response code="201">Envío asignado.</response>
+        /// <response code="400">Datos inválidos.</response>
+        /// <response code="404">El viaje no es del usuario o el envío no existe.</response>
+        /// <response code="409">Las restricciones ya no se cumplen o el envío fue tomado por otro conductor (el motivo va en title).</response>
         [HttpPost("{viajeId:int}/aceptar")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult> Aceptar(int viajeId, [FromBody] AceptarOportunidadDto dto)
+        public async Task<ActionResult<AsignacionDto>> Aceptar(int viajeId, [FromBody] AceptarOportunidadDto dto)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+            var resultado = await _oportunidadesServicio.AceptarAsync(User.ObtenerUsuarioId(), viajeId, dto.EnvioId!.Value);
 
-            if (!dto.EnvioId.HasValue)
-            {
-                return BadRequest(new { mensaje = "El ID del envío es requerido." });
-            }
-
-            var usuarioId = User.ObtenerUsuarioId();
-
-            var resultado = await _oportunidadesServicio.AceptarAsync(viajeId, dto.EnvioId.Value);
-
-            return resultado switch
+            return resultado.Resultado switch
             {
                 ResultadoOperacion.NoEncontrado => NotFound(),
-                ResultadoOperacion.Conflicto => Conflict(new { mensaje = "No se pudo aceptar la oportunidad: capacidad insuficiente, desvío excedido o envío ya asignado." }),
-                ResultadoOperacion.Exito => CreatedAtAction(nameof(Detalle), new { viajeId, envioId = dto.EnvioId }, null),
-                _ => BadRequest(new { mensaje = "Error desconocido al procesar la solicitud." })
+                ResultadoOperacion.Conflicto => Problem(statusCode: StatusCodes.Status409Conflict, title: resultado.Mensaje),
+                _ => StatusCode(StatusCodes.Status201Created, resultado.Asignacion)
             };
         }
     }
