@@ -1,0 +1,103 @@
+﻿@using RuteaYa.DTOs.Enums
+@model RuteaYa.DTOs.CrearEnvioDto
+@{
+    ViewData["Title"] = "Nuevo envío";
+
+    var tamanos = new (TamanoEnvio Valor, string Nombre)[]
+    {
+        (TamanoEnvio.Pequeno, "Pequeño"),
+        (TamanoEnvio.Mediano, "Mediano"),
+        (TamanoEnvio.Grande, "Grande")
+    };
+}
+
+<div class="mb-3">
+    <h1 class="h3 mb-0">Nuevo envío</h1>
+    <p class="text-muted small mb-0">Publicá un paquete que necesita ser transportado.</p>
+</div>
+
+<form asp-action="Nuevo" method="post" id="form-envio" class="card border-0 shadow-sm rounded-4"
+      data-url-direcciones="@Url.Action("BuscarDirecciones", "Viajes")">
+    <div class="card-body p-4">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger small"></div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="OrigenDir" class="form-label small fw-semibold">Origen</label>
+                <div class="autocompletar">
+                    <input asp-for="OrigenDir" class="form-control" placeholder="¿Dónde lo retiran?" autocomplete="off"
+                           data-lat="#OrigenLat" data-lng="#OrigenLng" />
+                    <ul class="autocompletar-lista list-group shadow-sm d-none"></ul>
+                </div>
+                <input type="hidden" id="OrigenLat" name="OrigenLat" value="@Model.OrigenLat" />
+                <input type="hidden" id="OrigenLng" name="OrigenLng" value="@Model.OrigenLng" />
+                <input type="hidden" name="__Invariant" value="OrigenLat" />
+                <input type="hidden" name="__Invariant" value="OrigenLng" />
+                <span asp-validation-for="OrigenDir" class="text-danger small"></span>
+                <span asp-validation-for="OrigenLat" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="DestinoDir" class="form-label small fw-semibold">Destino</label>
+                <div class="autocompletar">
+                    <input asp-for="DestinoDir" class="form-control" placeholder="¿A dónde llega?" autocomplete="off"
+                           data-lat="#DestinoLat" data-lng="#DestinoLng" />
+                    <ul class="autocompletar-lista list-group shadow-sm d-none"></ul>
+                </div>
+                <input type="hidden" id="DestinoLat" name="DestinoLat" value="@Model.DestinoLat" />
+                <input type="hidden" id="DestinoLng" name="DestinoLng" value="@Model.DestinoLng" />
+                <input type="hidden" name="__Invariant" value="DestinoLat" />
+                <input type="hidden" name="__Invariant" value="DestinoLng" />
+                <span asp-validation-for="DestinoDir" class="text-danger small"></span>
+                <span asp-validation-for="DestinoLat" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="FechaLimite" class="form-label small fw-semibold">Fecha</label>
+                <input asp-for="FechaLimite" type="date" class="form-control"
+                       min="@DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd")" />
+                <span asp-validation-for="FechaLimite" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="PesoKg" class="form-label small fw-semibold">Peso (kg)</label>
+                <input asp-for="PesoKg" type="number" step="any" class="form-control" placeholder="0" />
+                <span asp-validation-for="PesoKg" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Monto" class="form-label small fw-semibold">Monto ofrecido ($)</label>
+                <input asp-for="Monto" type="number" step="any" class="form-control" placeholder="0" />
+                <span asp-validation-for="Monto" class="text-danger small"></span>
+            </div>
+
+            <div class="col-12">
+                <span class="form-label small fw-semibold d-block">Tamaño</span>
+                <div class="d-flex flex-wrap gap-2" role="radiogroup" aria-label="Tamaño">
+                    @foreach (var (valor, nombre) in tamanos)
+                    {
+                        <input type="radio" asp-for="Tamano" value="@valor" class="btn-check" id="tamano-@valor" autocomplete="off" />
+                        <label class="btn btn-outline-dark rounded-pill" for="tamano-@valor">@nombre</label>
+                    }
+                </div>
+                <span asp-validation-for="Tamano" class="text-danger small"></span>
+            </div>
+
+            <div class="col-12">
+                <label asp-for="Descripcion" class="form-label small fw-semibold">Descripción</label>
+                <input asp-for="Descripcion" class="form-control" placeholder="Ej: zapatillas, documentos" />
+                <span asp-validation-for="Descripcion" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+            <a class="btn btn-outline-secondary" asp-action="Index">Cancelar</a>
+            <button type="submit" class="btn btn-dark">Publicar envío</button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/formulario-envio.js" asp-append-version="true"></script>
+}

@@ -68,10 +68,37 @@ namespace RuteaYa.MVC.Servicios
             return new ResultadoEdicionViaje();
         }
 
+        public Task<ResultadoCambioEstado> DesactivarAsync(int id)
+        {
+            return CambiarActivoAsync($"api/viajes/{id}/desactivar");
+        }
+
+        public Task<ResultadoCambioEstado> ActivarAsync(int id)
+        {
+            return CambiarActivoAsync($"api/viajes/{id}/activar");
+        }
+
         public async Task<List<DireccionDto>> BuscarDireccionesAsync(string texto)
         {
             var url = $"api/viajes/direcciones?texto={Uri.EscapeDataString(texto)}";
             return await _http.GetFromJsonAsync<List<DireccionDto>>(url) ?? new List<DireccionDto>();
+        }
+
+        private async Task<ResultadoCambioEstado> CambiarActivoAsync(string url)
+        {
+            var respuesta = await _http.PostAsync(url, null);
+
+            switch (respuesta.StatusCode)
+            {
+                case HttpStatusCode.NotFound:
+                    return new ResultadoCambioEstado { NoEncontrado = true };
+                case HttpStatusCode.Conflict:
+                    var problema = await respuesta.Content.ReadFromJsonAsync<ProblemDetails>();
+                    return new ResultadoCambioEstado { Conflicto = problema?.Title ?? "No se pudo cambiar el estado del viaje." };
+            }
+
+            respuesta.EnsureSuccessStatusCode();
+            return new ResultadoCambioEstado();
         }
 
         // Errores por campo del ValidationProblemDetails que devuelve [ApiController] en un 400.

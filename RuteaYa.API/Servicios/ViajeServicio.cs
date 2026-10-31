@@ -1,9 +1,10 @@
-using System.Globalization;
 using RuteaYa.API.Servicios.Interfaces;
 using RuteaYa.DTOs;
 using RuteaYa.DTOs.Enums;
+using RuteaYa.DTOs.Rutas;
 using RuteaYa.Entidades;
 using RuteaYa.Repositorios.Interfaces;
+using System.Globalization;
 
 namespace RuteaYa.API.Servicios
 {
@@ -86,6 +87,27 @@ namespace RuteaYa.API.Servicios
             return ResultadoOperacion.Exito;
         }
 
+        public async Task<ResultadoOperacion> CambiarActivoAsync(int usuarioId, int id, bool activo)
+        {
+            var viaje = await _repositorio.ObtenerPorIdAsync(id);
+
+            if (viaje == null || viaje.UsuarioId != usuarioId)
+            {
+                return ResultadoOperacion.NoEncontrado;
+            }
+
+            // Un viaje inactivo no recibe oportunidades: dejaría sin conductor a los envíos en curso.
+            if (!activo && TieneEnviosPendientes(viaje))
+            {
+                return ResultadoOperacion.Conflicto;
+            }
+
+            viaje.Activo = activo;
+            await _repositorio.GuardarCambiosAsync();
+
+            return ResultadoOperacion.Exito;
+        }
+
         public Task<List<DireccionDto>> BuscarDireccionesAsync(string texto)
         {
             // TODO Servicio de mapas: reemplazar la lista fija por la búsqueda del proveedor de mapas.
@@ -123,17 +145,18 @@ namespace RuteaYa.API.Servicios
             }));
         }
 
-        // El servicio de rutas no distingue origen/destino de las paradas: recibe el recorrido completo en orden.
         private async Task CalcularRutaAsync(Viaje viaje)
         {
-            var recorrido = new List<string> { viaje.OrigenDir };
-            recorrido.AddRange(viaje.Paradas.OrderBy(p => p.Orden).Select(p => p.Direccion));
-            recorrido.Add(viaje.DestinoDir);
+            var recorrido = new List<CoordenadaDto> { new CoordenadaDto(viaje.OrigenLat, viaje.OrigenLng) };
+            recorrido.AddRange(viaje.Paradas.OrderBy(p => p.Orden).Select(p => new CoordenadaDto(p.Lat, p.Lng)));
+            recorrido.Add(new CoordenadaDto(viaje.DestinoLat, viaje.DestinoLng));
 
-            var ruta = await _rutaServicio.CalcularRutaConParadasAsync(recorrido);
+            var ruta = await _rutaServicio.CalcularRutaAsync(recorrido);
             viaje.DistanciaKm = ruta.DistanciaKm;
             viaje.DuracionMin = ruta.DuracionMinutos;
         }
+
+
 
         private static bool TieneEnviosPendientes(Viaje viaje)
         {
@@ -154,7 +177,6 @@ namespace RuteaYa.API.Servicios
             dto.OrigenLng = viaje.OrigenLng;
             dto.DestinoLat = viaje.DestinoLat;
             dto.DestinoLng = viaje.DestinoLng;
-            dto.TieneEnviosPendientes = TieneEnviosPendientes(viaje);
 
             dto.Paradas = viaje.Paradas
                 .OrderBy(p => p.Orden)
@@ -181,6 +203,7 @@ namespace RuteaYa.API.Servicios
             dto.DistanciaKm = viaje.DistanciaKm;
             dto.DuracionMin = viaje.DuracionMin;
             dto.Activo = viaje.Activo;
+            dto.TieneEnviosPendientes = TieneEnviosPendientes(viaje);
             return dto;
         }
 

@@ -1,0 +1,125 @@
+@model RuteaYa.DTOs.DetalleOportunidadDto
+@{
+    ViewData["Title"] = "Detalle de oportunidad";
+    var ruta = Model.RutaDetalle;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div>
+        <h1 class="h3 mb-0">Detalle de oportunidad</h1>
+        <p class="text-muted small mb-0">@Model.Envio.OrigenDir → @Model.Envio.DestinoDir</p>
+    </div>
+    <a class="btn btn-outline-secondary btn-sm" asp-action="Index" asp-route-viajeId="@Model.ViajeId">Volver</a>
+</div>
+
+@if (ViewData["Error"] is string error)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+                <h2 class="h6 fw-semibold mb-1">Ruta habitual vs. con el envío</h2>
+                <div class="my-3">
+                    <partial name="_MapaComparacion" model="Model.RutaDetalle" />
+                </div>
+                <p class="text-muted small mb-3">Tu viaje @Model.ViajeOrigenDir → @Model.ViajeDestinoDir.</p>
+
+                <dl class="detalle-filas mb-0">
+                    <div>
+                        <dt>Distancia habitual</dt>
+                        <dd>@ruta.DistanciaHabitualKm.Numero() km</dd>
+                    </div>
+                    <div>
+                        <dt>Distancia con el envío</dt>
+                        <dd>@ruta.DistanciaConEnvioKm.Numero() km</dd>
+                    </div>
+                    <div>
+                        <dt>Desvío</dt>
+                        <dd>
+                            @ruta.DesvioKm.Numero() km
+                            @if (!string.IsNullOrEmpty(Model.Compatibilidad))
+                            {
+                                <span class="text-muted fw-normal small">· @Model.Compatibilidad</span>
+                            }
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>Tiempo habitual</dt>
+                        <dd>@ruta.TiempoHabitualMinutos min</dd>
+                    </div>
+                    <div>
+                        <dt>Tiempo adicional</dt>
+                        <dd>+@ruta.TiempoAdicionalMinutos min</dd>
+                    </div>
+                    <div>
+                        <dt>Peso</dt>
+                        <dd>@ruta.PesoKg.Numero() kg</dd>
+                    </div>
+                    <div>
+                        <dt>Capacidad restante</dt>
+                        <dd>@ruta.CapacidadRestanteKg.Numero() kg · @ruta.CapacidadRestantePaquetes @(ruta.CapacidadRestantePaquetes == 1 ? "paquete" : "paquetes")</dd>
+                    </div>
+                    <div>
+                        <dt>Fecha del viaje</dt>
+                        <dd>@(Model.FechaViaje?.ToString("dd/MM/yyyy") ?? "Sin fecha disponible")</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5 d-flex flex-column gap-3">
+        <div class="card border-0 shadow-sm rounded-4 tarjeta-pago">
+            <div class="card-body">
+                <h2 class="h6 fw-semibold mb-2">Pago</h2>
+                <div class="display-6 fw-semibold">@ruta.MontoPago.Moneda()</div>
+                <p class="small mb-3">
+                    @if (ruta.DesvioKm > 0)
+                    {
+                        <text>@ruta.GananciaPorKmAdicional.Moneda() por km adicional</text>
+                    }
+                    else
+                    {
+                        <text>Sin desvío de tu recorrido</text>
+                    }
+                </p>
+
+                @if (Model.PuedeAceptar)
+                {
+                    <form asp-action="Aceptar" asp-route-viajeId="@Model.ViajeId" asp-route-envioId="@Model.EnvioId" method="post">
+                        <input type="hidden" name="desdeDetalle" value="true" />
+                        <button type="submit" class="btn btn-light w-100 fw-semibold">Aceptar envío</button>
+                    </form>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-light w-100 fw-semibold" disabled>Aceptar envío</button>
+                    <p class="small mt-2 mb-0">@Model.Motivo</p>
+                }
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body">
+                <h2 class="h6 fw-semibold mb-3">Envío</h2>
+                <dl class="detalle-filas mb-0">
+                    <div>
+                        <dt>Descripción</dt>
+                        <dd>@Model.Envio.Descripcion</dd>
+                    </div>
+                    <div>
+                        <dt>Tamaño</dt>
+                        <dd>@Model.Envio.Tamano.Texto()</dd>
+                    </div>
+                    <div>
+                        <dt>Fecha límite</dt>
+                        <dd>@Model.Envio.FechaLimite.ToString("dd/MM/yyyy")</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>

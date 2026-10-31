@@ -16,5 +16,8 @@ namespace RuteaYa.DTOs
         public decimal DistanciaKm { get; set; }
         public int DuracionMin { get; set; }
         public bool Activo { get; set; }
+
+        // Hay envíos asignados sin terminar (asignado, retirado o en camino): el viaje no se puede editar ni desactivar.
+        public bool TieneEnviosPendientes { get; set; }
     }
 }

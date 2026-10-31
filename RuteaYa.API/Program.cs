@@ -5,12 +5,15 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Microsoft.Extensions.Options;
 using RuteaYa.API.Servicios;
 using RuteaYa.API.Servicios.Interfaces;
 using RuteaYa.API.Servicios.Simulados;
 using RuteaYa.Entidades;
 using RuteaYa.Repositorios;
 using RuteaYa.Repositorios.Interfaces;
+using RuteaYa.API.Servicios.Rutas;
+using Microsoft.Extensions.Caching.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,9 +52,34 @@ builder.Services.AddScoped<IViajeServicio, ViajeServicio>();
 builder.Services.AddScoped<IUsuarioServicio, UsuarioServicio>();
 builder.Services.AddScoped<ITokenServicio, TokenServicio>();
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
-builder.Services.AddScoped<IRutaServicio, RutaServicioMock>();
-builder.Services.AddScoped<IHistorialServicio, HistorialServicio>(); // <-- Agregado aquí
-builder.Services.AddScoped<IPotencialServicio, PotencialSimuladoServicio>();
+builder.Services.AddMemoryCache();
+builder.Services.Configure<RutasOpciones>(builder.Configuration.GetSection("Rutas"));
+builder.Services.AddScoped<RutaServicioMock>();
+builder.Services.AddHttpClient<RutaServicioGoogle>(cliente => cliente.Timeout = TimeSpan.FromSeconds(10));
+builder.Services.AddScoped<IRutaServicio>(sp =>
+{
+    var opciones = sp.GetRequiredService<IOptions<RutasOpciones>>().Value;
+    var mock = sp.GetRequiredService<RutaServicioMock>();
+
+    if (!opciones.UsarGoogle())
+    {
+        return mock;
+    }
+
+    var google = sp.GetRequiredService<RutaServicioGoogle>();
+    if (!opciones.RespaldoAlMock)
+    {
+        return google;
+    }
+
+    return new RutaServicioConRespaldo(
+        google, mock, sp.GetRequiredService<IMemoryCache>(), sp.GetRequiredService<ILogger<RutaServicioConRespaldo>>());
+});
+builder.Services.AddScoped<IHistorialServicio, HistorialServicio>();
+builder.Services.AddScoped<IEnvioServicio, EnvioServicio>();
+builder.Services.AddScoped<ITransporteServicio, TransporteServicio>();
+builder.Services.AddScoped<IOportunidadesServicio, OportunidadesServicio>();
+builder.Services.AddScoped<IOptimizadorServicio, OptimizadorServicio>();
 
 builder.Services.AddDbContext<RuteaYaDbContext>();
 
@@ -76,6 +104,13 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
+//app.Logger.LogInformation("Servicio de rutas: {Proveedor}",
+//    app.Services.GetRequiredService<IOptions<RutasOpciones>>().Value.UsarGoogle() ? "Google" : "Mock");
+var opcionesRutas = app.Services.GetRequiredService<IOptions<RutasOpciones>>().Value;
+app.Logger.LogInformation("Servicio de rutas: {Proveedor}",
+    !opcionesRutas.UsarGoogle() ? "Mock"
+    : opcionesRutas.RespaldoAlMock ? "Google (con respaldo al mock)"
+    : "Google (sin respaldo)");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

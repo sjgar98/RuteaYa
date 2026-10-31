@@ -41,5 +41,10 @@ namespace RuteaYa.Repositorios
             _db.Asignaciones.AddRange(asignaciones);
             await _db.SaveChangesAsync();
         }
+        public async Task GuardarCambiosAsync()
+        {
+            await _db.SaveChangesAsync();
+        }
+
     }
 }

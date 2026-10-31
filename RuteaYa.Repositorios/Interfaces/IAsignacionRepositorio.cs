@@ -7,5 +7,6 @@ namespace RuteaYa.Repositorios.Interfaces
         Task<List<Asignacion>> ListarPorConductorAsync(int conductorId);
         Task<Asignacion?> ObtenerPorIdAsync(int id);
         Task AgregarAsync(List<Asignacion> asignaciones);
+        Task GuardarCambiosAsync();  
     }
 }

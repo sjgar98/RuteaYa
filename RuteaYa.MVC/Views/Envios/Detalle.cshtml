@@ -1,0 +1,108 @@
+﻿@model RuteaYa.DTOs.EnvioDetalleDto
+@{
+    ViewData["Title"] = "Detalle del envío";
+}
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h1 class="h3 mb-0">Detalle del envío</h1>
+        <p class="text-muted small mb-0">@Model.OrigenDir → @Model.DestinoDir</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary btn-sm" asp-action="Index">Volver</a>
+        @if (Model.PuedeCancelar)
+        {
+            <form asp-action="Cancelar" asp-route-id="@Model.Id" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Cancelar</button>
+            </form>
+        }
+    </div>
+</div>
+
+@if (ViewData["Error"] is string error)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<div class="row g-3">
+    <div class="col-12 col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+                <h2 class="h6 text-muted mb-3">Envío</h2>
+                <dl class="row mb-0">
+                    <dt class="col-6">Estado</dt>
+                    <dd class="col-6"><span class="badge rounded-pill @Model.Estado.ClaseBadge()">@Model.Estado.Texto()</span></dd>
+
+                    <dt class="col-6">Origen</dt>
+                    <dd class="col-6">@Model.OrigenDir</dd>
+
+                    <dt class="col-6">Destino</dt>
+                    <dd class="col-6">@Model.DestinoDir</dd>
+
+                    <dt class="col-6">Fecha límite</dt>
+                    <dd class="col-6">@Model.FechaLimite.ToString("dd/MM/yyyy")</dd>
+
+                    <dt class="col-6">Peso</dt>
+                    <dd class="col-6">@Model.PesoKg.Numero() kg</dd>
+
+                    <dt class="col-6">Tamaño</dt>
+                    <dd class="col-6">@Model.Tamano.Texto()</dd>
+
+                    <dt class="col-6">Descripción</dt>
+                    <dd class="col-6">@Model.Descripcion</dd>
+
+                    <dt class="col-6">Monto</dt>
+                    <dd class="col-6">@Model.Monto.Moneda()</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-6 d-flex flex-column gap-3">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body">
+                <h2 class="h6 text-muted mb-3">Viaje asociado</h2>
+                @if (Model.ViajeAsociado == null)
+                {
+                    <p class="text-muted small mb-0">Todavía no tiene un conductor asignado.</p>
+                }
+                else
+                {
+                    <div class="fw-semibold">@Model.ViajeAsociado.OrigenDir → @Model.ViajeAsociado.DestinoDir</div>
+                    <div class="text-muted small mb-2">
+                        @Model.ViajeAsociado.FechaViaje.ToString("dd/MM/yyyy") ·
+                        Desvío @Model.ViajeAsociado.DesvioKm.Numero() km ·
+                        Ganancia @Model.ViajeAsociado.Ganancia.Moneda()
+                    </div>
+                    <a class="btn btn-outline-secondary btn-sm" asp-controller="Viajes" asp-action="Detalle" asp-route-id="@Model.ViajeAsociado.ViajeId">Ver viaje</a>
+                }
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body">
+                <h2 class="h6 text-muted mb-3">Historial de estados</h2>
+                @if (Model.Historial.Count == 0)
+                {
+                    <p class="text-muted small mb-0">Sin movimientos todavía.</p>
+                }
+                else
+                {
+                    <ul class="list-unstyled mb-0 small">
+                        @foreach (var h in Model.Historial)
+                        {
+                            <li class="mb-1">
+                                @h.Fecha.AHoraLocal().ToString("dd/MM/yyyy HH:mm") —
+                                @if (h.EstadoAnterior != null)
+                                {
+                                    @h.EstadoAnterior.Value.Texto() <text>→</text>
+                                }
+                                @h.EstadoNuevo.Texto()
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>
