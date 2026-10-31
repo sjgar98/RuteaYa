@@ -52,6 +52,17 @@ html {
   text-align: end;
 }
 
+/* Oportunidades */
+.oportunidad-monto {
+  min-width: 5rem;
+  text-align: end;
+}
+
+.tarjeta-pago {
+  background-color: #1e7a4c;
+  color: #fff;
+}
+
 /* Formulario de viaje */
 .autocompletar {
   position: relative;

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RuteaYa.MVC.Models;
 using RuteaYa.MVC.Servicios.Interfaces;
 
 namespace RuteaYa.MVC.Controllers
@@ -7,68 +8,75 @@ namespace RuteaYa.MVC.Controllers
     [Authorize]
     public class OportunidadesController : Controller
     {
-        private readonly IOportunidadesServicio _oportunidadesServicio;
+        private static readonly string[] _ordenes = { "ganancia", "desvio", "compatibilidad" };
 
-        public OportunidadesController(IOportunidadesServicio oportunidadesServicio)
+        private readonly IOportunidadesServicio _oportunidadesServicio;
+        private readonly IViajeServicio _viajeServicio;
+
+        public OportunidadesController(IOportunidadesServicio oportunidadesServicio, IViajeServicio viajeServicio)
         {
             _oportunidadesServicio = oportunidadesServicio;
+            _viajeServicio = viajeServicio;
         }
 
-        /// <summary>
-        /// Pantalla 8: Listado de oportunidades (envíos compatibles) para un viaje.
-        /// </summary>
-        public async Task<IActionResult> Index(int viajeId, string? ordenarPor = "ganancia")
+        // Pantalla 8. Sin viajeId (desde el menú) muestra el primer viaje activo.
+        public async Task<IActionResult> Index(int? viajeId, string? ordenarPor)
         {
-            ViewData["ViajeId"] = viajeId;
-            ViewData["OrdenarPor"] = ordenarPor;
+            var modelo = new OportunidadesViewModel
+            {
+                Viajes = await _viajeServicio.ListarAsync(true),
+                OrdenarPor = _ordenes.Contains(ordenarPor) ? ordenarPor! : "ganancia"
+            };
 
-            var oportunidades = await _oportunidadesServicio.ObtenerOportunidadesAsync(viajeId, ordenarPor);
+            viajeId ??= modelo.Viajes.FirstOrDefault()?.Id;
+            if (viajeId.HasValue)
+            {
+                modelo.Viaje = await _oportunidadesServicio.ListarAsync(viajeId.Value, modelo.OrdenarPor);
+                if (modelo.Viaje == null)
+                {
+                    return NotFound();
+                }
+            }
 
-            return View(oportunidades);
+            ViewData["Error"] = TempData["Error"];
+            return View(modelo);
         }
 
-        /// <summary>
-        /// Pantalla 9: Detalle de una oportunidad específica.
-        /// </summary>
+        // Pantalla 9.
         public async Task<IActionResult> Detalle(int viajeId, int envioId)
         {
             var detalle = await _oportunidadesServicio.ObtenerDetalleAsync(viajeId, envioId);
             if (detalle == null)
             {
-                return NotFound();
+                TempData["Error"] = "La oportunidad ya no está disponible.";
+                return RedirectToAction(nameof(Index), new { viajeId });
             }
 
-            ViewData["ViajeId"] = viajeId;
-
+            ViewData["Error"] = TempData["Error"];
             return View(detalle);
         }
 
-        /// <summary>
-        /// Acepta una oportunidad (POST desde el detalle).
-        /// </summary>
+        // Se puede aceptar desde el listado o desde el detalle; ante un conflicto se vuelve a donde estaba.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Aceptar(int viajeId, int envioId)
+        public async Task<IActionResult> Aceptar(int viajeId, int envioId, bool desdeDetalle = false)
         {
             var resultado = await _oportunidadesServicio.AceptarAsync(viajeId, envioId);
-
-            if (resultado.Exitoso)
-            {
-                // Redirigir a listado con mensaje de éxito
-                TempData["Mensaje"] = "¡Oportunidad aceptada correctamente!";
-                TempData["Tipo"] = "success";
-                return RedirectToAction("Index", new { viajeId });
-            }
-
             if (resultado.NoEncontrado)
             {
                 return NotFound();
             }
 
-            // Redirigir al detalle con mensaje de error
-            TempData["Mensaje"] = resultado.Conflicto ?? "No se pudo aceptar la oportunidad.";
-            TempData["Tipo"] = "error";
-            return RedirectToAction("Detalle", new { viajeId, envioId });
+            if (resultado.Conflicto != null)
+            {
+                TempData["Error"] = resultado.Conflicto;
+                return desdeDetalle
+                    ? RedirectToAction(nameof(Detalle), new { viajeId, envioId })
+                    : RedirectToAction(nameof(Index), new { viajeId });
+            }
+
+            TempData["MensajeExito"] = "Aceptaste el envío. Lo vas a ver en Mis transportes.";
+            return RedirectToAction(nameof(Index), new { viajeId });
         }
     }
 }

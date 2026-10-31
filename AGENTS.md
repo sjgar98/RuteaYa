@@ -160,9 +160,27 @@ no depende de EF ni de HTTP) que expone:
 
 La usan `EnvioServicio.CancelarAsync` (→ `Cancelado`) y `TransporteServicio` (`MarcarRetiradoAsync` /
 `MarcarEnCaminoAsync` / `MarcarEntregadoAsync`, con el `Envio` llegando vía `Asignacion.Envio`).
-Cualquier transición de estado de envío nueva (incluida la que falte para Pantalla 8-11 cuando se
-confirme una asignación → `ConductorAsignado`) debe agregarse a la tabla de `EnvioEstadoMaquina`,
+`OportunidadesServicio.AceptarAsync` la usa para `BuscandoConductor → ConductorAsignado`.
+Cualquier transición de estado de envío nueva debe agregarse a la tabla de `EnvioEstadoMaquina`,
 no reimplementarse en el servicio que la dispara.
+
+### 4.2 Motor de compatibilidad (Oportunidades)
+`OportunidadesServicio.EvaluarAsync(viaje, envio, ...)` aplica las reglas en este orden y devuelve el
+primer motivo por el que el envío no entra (o ninguno), la `FechaViaje` y la comparación de rutas:
+1. Viaje activo y del usuario (si no es del usuario, el servicio devuelve null / `NoEncontrado` → 404).
+2. Envío de otro usuario, en `BuscandoConductor` y sin `Asignacion`; `FechaLimite` ≥ hoy.
+3. **Fecha:** primera fecha entre hoy y `FechaLimite` que cae en un día del viaje **y** tiene lugar.
+4. **Capacidad por salida:** solo cuentan las asignaciones del viaje con esa `FechaViaje` cuyo envío no
+   está `Cancelado` (las de otras fechas no ocupan lugar). Paquetes y kg.
+5. **Desvío** (`IRutaServicio.CompararConEnvioAsync`) ≤ `DesvioMaxKm`. En el listado hay un prefiltro en línea
+   recta (hasta 1,5 × el máximo) para no consultar rutas de más. Si la ruta falla: `LogWarning` y se descarta.
+- Compatibilidad = desvío / desvío máximo: ≤ 0,3 "Muy compatible", ≤ 0,5 "Compatible", si no "Mucho desvío";
+  `PuntuacionCompatibilidad` = 1 − esa proporción.
+- "Hoy" es la fecha de Argentina (UTC − 3), igual que en las vistas.
+- `AceptarAsync` vuelve a evaluar todo (las restricciones pueden haber cambiado) y devuelve
+  `ResultadoAsignacion` (`ResultadoOperacion` + mensaje para el 409 + `AsignacionDto`).
+- Para el Optimizador / Potencial: reusar `EvaluarAsync` (hoy es privado; exponerlo cuando se necesite)
+  en vez de reimplementar las reglas.
 
 ## 5. Estado por funcionalidad
 
@@ -178,17 +196,17 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 | — | Paradas dentro de un viaje | 🟡 vía `PUT api/viajes/{id}` (lista completa en orden) · ❌ endpoints propios `api/viajes/{id}/paradas` | se editan en el form del viaje | 🟡 |
 | 6 | Nuevo envío | ✅ `POST api/envios` | ✅ `Envios/Nuevo` + form + `formulario-envio.js` (autocompletado origen/destino reusando `Viajes/BuscarDirecciones`, tamaño como pills) | ✅ |
 | 7 | Mis envíos (+ detalle, cancelar) | ✅ `GET api/envios?estado=`, ✅ `GET api/envios/{id}` (con viaje asociado e historial), ✅ `POST api/envios/{id}/cancelar` (204 / 404 / 409) | ✅ `Envios/Index` (filtros por estado, `PuedeCancelar` calculado), `Envios/Detalle` (viaje asociado, historial de estados con hora local) | ✅ |
-| 8 | Oportunidades | 🟡 `GET api/oportunidades/{viajeId}?ordenarPor=` (`ganancia`, `desvio` o `compatibilidad`) | ✅ `OportunidadesController.Index(viajeId, ordenarPor)` + `Views/Oportunidades/Index` | 🟡 Implementado con filtros de capacidad/peso/desvío y ordenamiento; falta alinear ruta/contrato final con enunciado y completar validaciones de dominio (fecha/día/propietario) |
-| 9 | Detalle de oportunidad | 🟡 `GET api/oportunidades/{viajeId}/detalle?envioId=` | ✅ `OportunidadesController.Detalle(viajeId, envioId)` + `Views/Oportunidades/Detalle` | 🟡 Muestra impacto de ruta (habitual vs con envío), ganancia y capacidad restante usando `IRutaServicio` (Google o mock). El detalle compone monto, peso y capacidad restante; la ruta solo aporta distancias y tiempos |
+| 8 | Oportunidades | ✅ `GET api/oportunidades/{viajeId}?ordenarPor=` (`ganancia`, `desvio` o `compatibilidad`) → `OportunidadesViajeDto` (datos del viaje + lista); 404 si el viaje no es propio | ✅ `OportunidadesController.Index(viajeId?, ordenarPor)` (sin viajeId toma el primer viaje activo; selector de viaje + `oportunidades.js`, orden en pills, Aceptar desde la lista) | ✅ Motor de compatibilidad en `OportunidadesServicio.EvaluarAsync` (ver 4.2). Empates: ganancia desc → desvío asc |
+| 9 | Detalle de oportunidad | ✅ `GET api/oportunidades/{viajeId}/detalle?envioId=` (404 si el viaje no es propio o el envío no existe, es propio o ya no busca conductor) | ✅ `OportunidadesController.Detalle` + vista con tarjeta "Pago"; si la API da 404 vuelve al listado con "La oportunidad ya no está disponible" | ✅ Ruta habitual vs. con el envío, desvío, tiempos, pago, ganancia por km, capacidad restante (después de aceptar) y fecha del viaje. Si una restricción dejó de cumplirse: `PuedeAceptar = false` + `Motivo`, botón deshabilitado |
 | 10 | Optimizador | ❌ `GET api/viajes/{id}/optimizacion` (o `POST`) | ❌ | ❌ |
-| 11 | Confirmación / asignación | 🟡 `POST api/oportunidades/{viajeId}/aceptar` (body `AceptarOportunidadDto`) → 201 / 404 / 409 | 🟡 `OportunidadesController.Aceptar [POST]` desde Detalle | 🟡 Hay aceptación directa de una oportunidad con creación de `Asignacion`; falta la pantalla de confirmación y el flujo transaccional multi-envío (`api/asignaciones`) |
+| 11 | Confirmación / asignación | 🟡 `POST api/oportunidades/{viajeId}/aceptar` (body `AceptarOportunidadDto`) → 201 `AsignacionDto` / 404 / 409 `ProblemDetails` con el motivo en `title` | 🟡 `OportunidadesController.Aceptar [POST]` desde la lista o el Detalle (409 → alerta con el motivo; éxito → toast) | 🟡 Aceptar un envío revalida todo, crea la `Asignacion` (con `FechaViaje`) y pasa el envío a `ConductorAsignado` en un solo `SaveChanges`; `DbUpdateException` (índice único) → 409. Falta: `api/asignaciones` multi-envío (para el Optimizador) y la pantalla de Confirmación |
 | 12 | Mis transportes | ✅ `GET api/transportes`, ✅ `POST api/transportes/{asignacionId}/retirado`, `/en-camino`, `/entregado` (204 / 404 / 409) | ✅ `TransportesController.Index` (acciones condicionadas por `PuedeMarcarRetirado/EnCamino/Entregado`) | ✅ |
 | 13 | Historial | ✅ `GET api/historial?desde=&hasta=&orden=&estado=` (viajes con envios entregados, orden por fecha/monto) | 🟡 `HistorialController.Index` + `Views/Historial/Index` (KPIs, filtros por fecha/orden, link a detalle de viaje) | 🟡 Falta cubrir estados/tipos adicionales y tests unitarios del servicio |
 | 14 | Potencial mensual (req. para 10) | ❌ `GET api/potencial?mes=yyyy-MM&criterio=` (`ganancia`, `desvio` o `equilibrio`) | ❌ | ❌ |
 | — | Servicio de rutas/mapas | ✅ `IRutaServicio` con coordenadas (`CalcularRutaAsync`, `CompararConEnvioAsync`) + `RutaServicioGoogle` (Routes API, caché) + `RutaServicioMock`, elegidas por `Rutas:Proveedor`. `RutasController` conserva endpoints de texto (legado) . RutaServicioConRespaldo (decorador): si Google falla responde con el mock y loguea un warning | — | 🟡 Google funcionando y mock sin key o como respaldo si Google falla; lo usan `ViajeServicio` (distancia/duración) y `OportunidadesServicio` (desvío). Falta: borrar los métodos de texto (usan Geocoding, que exige facturación), test de `RutasOpciones.UsarGoogle()` y direcciones reales (hoy lista fija) |
-| — | Máquina de estados de envío | ✅ `EnvioEstadoMaquina` (estática, `API/Servicios/`): única fuente de verdad de las transiciones de `EstadoEnvio` (ver 4.1) | — | ✅ Usada por Cancelar (Pantalla 7) y retirado/en camino/entregado (Pantalla 12); falta agregar la transición `BuscandoConductor → ConductorAsignado` cuando se implemente Confirmación (Pantalla 11) |
+| — | Máquina de estados de envío | ✅ `EnvioEstadoMaquina` (estática, `API/Servicios/`): única fuente de verdad de las transiciones de `EstadoEnvio` (ver 4.1) | — | ✅ Usada por Cancelar (Pantalla 7), aceptar oportunidad (`→ ConductorAsignado`, Pantallas 8-9) y retirado/en camino/entregado (Pantalla 12) |
 | — | Layout con sidebar | — | ✅ `_Layout.cshtml` + `_MenuLateral.cshtml` (secciones → `/<Controller>`, activa según el controller actual) + `_MenuUsuario.cshtml` (nombre, email, Cerrar sesión). En celulares el menú es un offcanvas | ✅ Controllers esperados: `Envios` ✅, `Oportunidades` ✅, `Optimizador` ❌, `Transportes` ✅, `Historial` ✅, `Potencial` ❌ (acción `Index`); si se usa otro nombre, cambiarlo en `_MenuLateral` |
-| — | Tests unitarios por endpoint | — | — | 🟡 `UsuarioServicio`, `ViajeServicio.ObtenerDetalleAsync`, `CrearAsync` (cálculo de ruta) y `ActualizarAsync`; `EnvioServicioTests` (listar, detalle, cancelar con todas las transiciones de `EnvioEstadoMaquina`, crear) y `TransporteServicioTests` (listar, marcar retirado/en camino/entregado con cobertura de "sin saltear estados") completos. Oportunidades sin tests unitarios aún ; rutas: `RutasTests` (inserción del recorrido, `PolylineCodec`, mock y `GeoUtil`), `RutaServicioGoogleTests` (parseo, caché, errores, comparación y geocoding con `HttpMessageHandler` falso) y `RutaServicioConRespaldoTests` (respaldo al mock y pausa ante fallas de red)|
+| — | Tests unitarios por endpoint | — | — | 🟡 `UsuarioServicio`, `ViajeServicio.ObtenerDetalleAsync`, `CrearAsync` (cálculo de ruta) y `ActualizarAsync`; `EnvioServicioTests` (listar, detalle, cancelar con todas las transiciones de `EnvioEstadoMaquina`, crear) y `TransporteServicioTests` (listar, marcar retirado/en camino/entregado con cobertura de "sin saltear estados") completos. `OportunidadesServicioTests` (propietario, viaje inactivo, envíos propios/no disponibles, fecha/día, capacidad y peso por fecha de salida, desvío, etiquetas, orden y desempate, falla de ruta, detalle con y sin restricciones, aceptar → `ConductorAsignado` + historial, conflictos e índice único); rutas: `RutasTests` (inserción del recorrido, `PolylineCodec`, mock y `GeoUtil`), `RutaServicioGoogleTests` (parseo, caché, errores, comparación y geocoding con `HttpMessageHandler` falso) y `RutaServicioConRespaldoTests` (respaldo al mock y pausa ante fallas de red)|
 | — | README (cómo correr y configurar BD desde cero) | — | — | ❌ |
 
 ## 6. Mocks y pendientes transversales
@@ -253,8 +271,8 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 
 **Pendiente**
 - Tests de `RutasOpciones.UsarGoogle()`.
-- Con `Rutas:RespaldoAlMock = false` y Google caído, Oportunidades muestra la lista vacía: el `catch` de 
-  `OportunidadesServicio` descarta cada envío sin avisar (sugerir a Seba que al menos loguee un warning).
+- Con `Rutas:RespaldoAlMock = false` y Google caído, Oportunidades muestra la lista vacía: cada envío sin ruta
+  se descarta (queda un `LogWarning` por envío en `OportunidadesServicio`).
 - Borrar los métodos de texto de `IRutaServicio` y migrar `RutasController`.
 - Buscador de direcciones real (hoy lista fija).
 
@@ -412,9 +430,11 @@ Entregado), Palermo → Avellaneda ($7.000, 8 kg), Caballito → Lomas ($4.000, 
   la app: si la BD no está accesible, la API no arranca.
 - `appsettings.json` del MVC apunta a `https://localhost:7134/` (perfil https de la API); Development usa
   `http://localhost:5125/`. Correr ambos con el mismo esquema.
-- Oportunidades está implementado en `OportunidadesController` (MVC) y `api/oportunidades` (API).
-  El contrato actual no coincide con la ruta sugerida por el enunciado (`api/viajes/{id}/oportunidades`), así que
+- Oportunidades está en `api/oportunidades/{viajeId}` (los nombres de ruta pueden variar según el enunciado);
   cualquier cambio de ruta requiere ajustar `RuteaYa.MVC/Servicios/OportunidadesServicio.cs`.
+- Bootstrap 5.3 no tiene `text-bg-*-subtle`: para badges suaves usar `bg-*-subtle text-*-emphasis`.
+- `InicializadorDatos` está comentado en `API/Program.cs` y sus envíos son todos `Entregado` y sin coordenadas:
+  para probar Oportunidades hay que crear envíos con otro usuario (no se ofrecen envíos propios).
 - Todas las fechas/horas de evento se guardan en UTC; las vistas que las muestran deben pasar por
   `DateTime.AHoraLocal()` o se ven adelantadas 3 horas respecto a la hora de Argentina (ver 6.3).
 - `ListarDisponiblesAsync` solo filtra por estado/fecha/usuario: capacidad, peso, día y desvío se

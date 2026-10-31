@@ -1,38 +1,16 @@
 using RuteaYa.DTOs;
+using RuteaYa.MVC.Models;
 
 namespace RuteaYa.MVC.Servicios.Interfaces
 {
     public interface IOportunidadesServicio
     {
-        /// <summary>
-        /// Obtiene la lista de oportunidades (envíos compatibles) para un viaje.
-        /// </summary>
-        /// <param name="viajeId">ID del viaje</param>
-        /// <param name="ordenarPor">Criterio de ordenamiento: "ganancia" (default), "desvio" o "compatibilidad"</param>
-        Task<List<OportunidadDto>> ObtenerOportunidadesAsync(int viajeId, string? ordenarPor = "ganancia");
+        // null si el viaje no existe o no es del usuario (404 de la API).
+        Task<OportunidadesViajeDto?> ListarAsync(int viajeId, string ordenarPor);
 
-        /// <summary>
-        /// Obtiene el detalle completo de una oportunidad (envío + información de ruta).
-        /// </summary>
-        /// <param name="viajeId">ID del viaje</param>
-        /// <param name="envioId">ID del envío (oportunidad)</param>
-        /// <returns>Null si no existe o pertenece a otro usuario</returns>
+        // null si el viaje no es del usuario o el envío ya no está disponible (404 de la API).
         Task<DetalleOportunidadDto?> ObtenerDetalleAsync(int viajeId, int envioId);
 
-        /// <summary>
-        /// Acepta una oportunidad: asigna el envío al viaje del usuario.
-        /// </summary>
-        /// <param name="viajeId">ID del viaje</param>
-        /// <param name="envioId">ID del envío a aceptar</param>
-        /// <returns>Resultado de la operación con mensajes de error si aplica</returns>
         Task<ResultadoAceptarOportunidad> AceptarAsync(int viajeId, int envioId);
-    }
-
-    // Modelo auxiliar para encapsular resultado de aceptación
-    public class ResultadoAceptarOportunidad
-    {
-        public bool Exitoso { get; set; }
-        public bool NoEncontrado { get; set; }
-        public string? Conflicto { get; set; }
     }
 }
