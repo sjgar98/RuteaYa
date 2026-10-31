@@ -12,6 +12,7 @@ using RuteaYa.Entidades;
 using RuteaYa.Repositorios;
 using RuteaYa.Repositorios.Interfaces;
 using RuteaYa.API.Servicios.Rutas;
+using Microsoft.Extensions.Caching.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,9 +58,21 @@ builder.Services.AddHttpClient<RutaServicioGoogle>(cliente => cliente.Timeout = 
 builder.Services.AddScoped<IRutaServicio>(sp =>
 {
     var opciones = sp.GetRequiredService<IOptions<RutasOpciones>>().Value;
-    return opciones.UsarGoogle()
-        ? sp.GetRequiredService<RutaServicioGoogle>()
-        : sp.GetRequiredService<RutaServicioMock>();
+    var mock = sp.GetRequiredService<RutaServicioMock>();
+
+    if (!opciones.UsarGoogle())
+    {
+        return mock;
+    }
+
+    var google = sp.GetRequiredService<RutaServicioGoogle>();
+    if (!opciones.RespaldoAlMock)
+    {
+        return google;
+    }
+
+    return new RutaServicioConRespaldo(
+        google, mock, sp.GetRequiredService<IMemoryCache>(), sp.GetRequiredService<ILogger<RutaServicioConRespaldo>>());
 });
 builder.Services.AddScoped<IHistorialServicio, HistorialServicio>();
 builder.Services.AddScoped<IEnvioServicio, EnvioServicio>();
@@ -89,8 +102,13 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
+//app.Logger.LogInformation("Servicio de rutas: {Proveedor}",
+//    app.Services.GetRequiredService<IOptions<RutasOpciones>>().Value.UsarGoogle() ? "Google" : "Mock");
+var opcionesRutas = app.Services.GetRequiredService<IOptions<RutasOpciones>>().Value;
 app.Logger.LogInformation("Servicio de rutas: {Proveedor}",
-    app.Services.GetRequiredService<IOptions<RutasOpciones>>().Value.UsarGoogle() ? "Google" : "Mock");
+    !opcionesRutas.UsarGoogle() ? "Mock"
+    : opcionesRutas.RespaldoAlMock ? "Google (con respaldo al mock)"
+    : "Google (sin respaldo)");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
