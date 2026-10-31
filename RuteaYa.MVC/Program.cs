@@ -50,6 +50,9 @@ builder.Services.AddHttpClient<ITransporteServicio, TransporteServicio>(c => c.B
 builder.Services.AddHttpClient<IOportunidadesServicio, OportunidadesServicio>(c => c.BaseAddress = apiUrl)
     .AddHttpMessageHandler<TokenHandler>();
 
+builder.Services.AddHttpClient<IOptimizadorServicio, OptimizadorServicio>(c => c.BaseAddress = apiUrl)
+    .AddHttpMessageHandler<TokenHandler>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
