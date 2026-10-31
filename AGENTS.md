@@ -268,6 +268,10 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
   (`dotnet user-secrets set "GoogleMaps:ApiKey" "<clave>" --project RuteaYa.MVC`). Restringida por referrer
   HTTP (`localhost:*`) y a Maps JavaScript API + Routes API. Sin key, la partial muestra "Mapa no disponible"
   en lugar del mapa y el resto del formulario funciona.
+- Comparación en Detalle de oportunidad: partial `Views/Shared/_MapaComparacion.cshtml` + `wwwroot/js/mapa-comparacion.js`. 
+  Decodifica las polylines de `RutaHabitual` y `RutaConEnvio` (`DetalleOportunidadRutaDto`) con la librería `geometry` y 
+  las dibuja en gris y azul. Usa la misma key del navegador (`GoogleMaps:ApiKey`); sin key o sin trazado muestra un aviso. 
+  No marca el retiro ni la entrega porque el DTO no trae sus coordenadas.
 
 **Pendiente**
 - Tests de `RutasOpciones.UsarGoogle()`.

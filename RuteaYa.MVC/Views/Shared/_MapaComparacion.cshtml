@@ -1,0 +1,40 @@
+﻿@using RuteaYa.DTOs.Rutas
+@inject IConfiguration Configuration
+@model DetalleOportunidadRutaDto
+@{
+    // Dibuja la ruta habitual y la ruta con el envío (polylines que ya trae el DTO). Sin API key
+    // o sin trazado muestra un aviso en lugar del mapa.
+    var clave = Configuration["GoogleMaps:ApiKey"];
+    bool hayTrazado = !string.IsNullOrWhiteSpace(Model.RutaHabitual.Polyline)
+        && !string.IsNullOrWhiteSpace(Model.RutaConEnvio.Polyline);
+}
+
+@if (string.IsNullOrWhiteSpace(clave))
+{
+    <div class="alert alert-secondary small mb-0" role="status">
+        Mapa no disponible: falta configurar la API key de Google Maps (<code>GoogleMaps:ApiKey</code>).
+    </div>
+}
+else if (!hayTrazado)
+{
+    <div class="alert alert-secondary small mb-0" role="status">
+        No hay trazado de ruta disponible para esta oportunidad.
+    </div>
+}
+else
+{
+    <div class="d-flex flex-wrap gap-3 small mb-2">
+        <span><span class="d-inline-block align-middle me-1" style="width:24px;height:6px;background:#6c757d;border-radius:3px"></span>Ruta habitual</span>
+        <span><span class="d-inline-block align-middle me-1" style="width:24px;height:4px;background:#0d6efd;border-radius:2px"></span>Ruta con el envío</span>
+    </div>
+
+    <div id="mapa-comparacion" class="mapa-ruta shadow-sm border"></div>
+    <div id="mapa-comparacion-estado" class="small text-muted mt-1" role="status"></div>
+
+    <script type="application/json" id="mapa-comparacion-datos">
+        @Json.Serialize(new { habitual = Model.RutaHabitual.Polyline, conEnvio = Model.RutaConEnvio.Polyline })
+    </script>
+
+    <script src="~/js/mapa-comparacion.js" asp-append-version="true"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=@clave&callback=initMapaComparacion&loading=async" async defer></script>
+}
