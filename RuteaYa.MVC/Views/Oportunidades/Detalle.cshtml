@@ -22,6 +22,9 @@
         <div class="card border-0 shadow-sm rounded-4 h-100">
             <div class="card-body">
                 <h2 class="h6 fw-semibold mb-1">Ruta habitual vs. con el envío</h2>
+                <div class="my-3">
+                    <partial name="_MapaComparacion" model="Model.RutaDetalle" />
+                </div>
                 <p class="text-muted small mb-3">Tu viaje @Model.ViajeOrigenDir → @Model.ViajeDestinoDir.</p>
 
                 <dl class="detalle-filas mb-0">

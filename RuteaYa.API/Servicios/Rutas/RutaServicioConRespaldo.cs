@@ -49,30 +49,6 @@ namespace RuteaYa.API.Servicios.Rutas
             return EjecutarAsync(nameof(GeocodificarDireccionAsync), default, p => p.GeocodificarDireccionAsync(direccion));
         }
 
-        
-
-        public Task<RutaResultadoDto> CalcularRutaConParadasAsync(List<string> paradas)
-        {
-            return EjecutarAsync(nameof(CalcularRutaConParadasAsync), default, p => p.CalcularRutaConParadasAsync(paradas));
-        }
-
-        public Task<RutaResultadoDto> CalcularRutaAlternativaEnvioAsync(string origen, string destino, string retiroPaquete, string entregaPaquete)
-        {
-            return EjecutarAsync(nameof(CalcularRutaAlternativaEnvioAsync), default,
-                p => p.CalcularRutaAlternativaEnvioAsync(origen, destino, retiroPaquete, entregaPaquete));
-        }
-
-        public Task<decimal> CalcularDesvioAsync(string rutaOriginalId, string paradaExtra)
-        {
-            return EjecutarAsync(nameof(CalcularDesvioAsync), default, p => p.CalcularDesvioAsync(rutaOriginalId, paradaExtra));
-        }
-
-        public Task<DetalleOportunidadRutaDto> ObtenerDetalleOportunidadAsync(
-            string origenHabitual, string destinoHabitual, string retiroEnvio, string entregaEnvio)
-        {
-            return EjecutarAsync(nameof(ObtenerDetalleOportunidadAsync), default,
-                p => p.ObtenerDetalleOportunidadAsync(origenHabitual, destinoHabitual, retiroEnvio, entregaEnvio));
-        }
 
         public Task<List<string>> BuscarDireccionesAsync(string texto)
         {
