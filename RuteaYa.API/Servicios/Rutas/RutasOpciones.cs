@@ -8,6 +8,11 @@
 
         /// <summary>Key de servidor (Routes API + Geocoding API). Va en user-secrets, no en appsettings.</summary>
         public string GoogleApiKey { get; set; } = string.Empty;
+        /// <summary>
+        /// Si Google falla (red, cuota, key inválida), responder con el mock y dejar un aviso en el log.
+        /// Con el mock los desvíos y tiempos son simulados: apagarlo para comprobar que Google anda de verdad.
+        /// </summary>
+        public bool RespaldoAlMock { get; set; } = true;
 
         public bool UsarGoogle()
         {

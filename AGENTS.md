@@ -147,7 +147,7 @@ Repositorios existentes (métodos ya disponibles, muchos aún sin uso):
 - `IEnvioRepositorio`: `ListarPorUsuarioAsync(usuarioId, estado?)`, `ListarDisponiblesAsync(desde, usuarioIdExcluido)` (BuscandoConductor, no vencidos, de otros usuarios), `ListarPorIdsAsync`, `ObtenerPorIdAsync` (con Asignacion+Viaje e Historial), `AgregarAsync`, `GuardarCambiosAsync`.
 - `IAsignacionRepositorio`: `ListarPorConductorAsync` (filtra por `Viaje.UsuarioId`, con `Envio` y `Viaje` incluidos, `AsNoTracking`), `ObtenerPorIdAsync` (con tracking, para cambiar estado), `AgregarAsync(List<Asignacion>)` (una o varias en un solo `SaveChanges`), `GuardarCambiosAsync`.
 
-Todos registrados como `Scoped` en `RuteaYa.API/Program.cs`. Servicios de la API: `IViajeServicio`, `IUsuarioServicio`, `ITokenServicio`, `IRutaServicio` (`RutaServicioGoogle` o `RutaServicioMock`, según `Rutas:Proveedor`), `IHistorialServicio`, `IEnvioServicio`, `ITransporteServicio`, `IOportunidadesServicio`.
+Todos registrados como `Scoped` en `RuteaYa.API/Program.cs`. Servicios de la API: `IViajeServicio`, `IUsuarioServicio`, `ITokenServicio`, `IRutaServicio` (`RutaServicioGoogle` o `RutaServicioMock`, según `Rutas:Proveedor`; Google va envuelto en `RutaServicioConRespaldo` si `Rutas:RespaldoAlMock` es `true`), `IHistorialServicio`, `IEnvioServicio`, `ITransporteServicio`, `IOportunidadesServicio`.
 
 ### 4.1 Máquina de estados de envíos
 `RuteaYa.API/Servicios/EnvioEstadoMaquina.cs` es la **única fuente de verdad** para las transiciones
@@ -185,10 +185,10 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 | 12 | Mis transportes | ✅ `GET api/transportes`, ✅ `POST api/transportes/{asignacionId}/retirado`, `/en-camino`, `/entregado` (204 / 404 / 409) | ✅ `TransportesController.Index` (acciones condicionadas por `PuedeMarcarRetirado/EnCamino/Entregado`) | ✅ |
 | 13 | Historial | ✅ `GET api/historial?desde=&hasta=&orden=&estado=` (viajes con envios entregados, orden por fecha/monto) | 🟡 `HistorialController.Index` + `Views/Historial/Index` (KPIs, filtros por fecha/orden, link a detalle de viaje) | 🟡 Falta cubrir estados/tipos adicionales y tests unitarios del servicio |
 | 14 | Potencial mensual (req. para 10) | ❌ `GET api/potencial?mes=yyyy-MM&criterio=` (`ganancia`, `desvio` o `equilibrio`) | ❌ | ❌ |
-| — | Servicio de rutas/mapas | ✅ `IRutaServicio` con coordenadas (`CalcularRutaAsync`, `CompararConEnvioAsync`) + `RutaServicioGoogle` (Routes API, caché) + `RutaServicioMock`, elegidas por `Rutas:Proveedor`. `RutasController` conserva endpoints de texto (legado) | — | 🟡 Google funcionando y mock como respaldo sin key; lo usan `ViajeServicio` (distancia/duración) y `OportunidadesServicio` (desvío). Falta: caer al mock si Google falla, tests de `RutaServicioGoogle`, borrar los métodos de texto (usan Geocoding, que exige facturación) y direcciones reales (hoy lista fija) |
+| — | Servicio de rutas/mapas | ✅ `IRutaServicio` con coordenadas (`CalcularRutaAsync`, `CompararConEnvioAsync`) + `RutaServicioGoogle` (Routes API, caché) + `RutaServicioMock`, elegidas por `Rutas:Proveedor`. `RutasController` conserva endpoints de texto (legado) . RutaServicioConRespaldo (decorador): si Google falla responde con el mock y loguea un warning | — | 🟡 Google funcionando y mock sin key o como respaldo si Google falla; lo usan `ViajeServicio` (distancia/duración) y `OportunidadesServicio` (desvío). Falta: borrar los métodos de texto (usan Geocoding, que exige facturación), test de `RutasOpciones.UsarGoogle()` y direcciones reales (hoy lista fija) |
 | — | Máquina de estados de envío | ✅ `EnvioEstadoMaquina` (estática, `API/Servicios/`): única fuente de verdad de las transiciones de `EstadoEnvio` (ver 4.1) | — | ✅ Usada por Cancelar (Pantalla 7) y retirado/en camino/entregado (Pantalla 12); falta agregar la transición `BuscandoConductor → ConductorAsignado` cuando se implemente Confirmación (Pantalla 11) |
 | — | Layout con sidebar | — | ✅ `_Layout.cshtml` + `_MenuLateral.cshtml` (secciones → `/<Controller>`, activa según el controller actual) + `_MenuUsuario.cshtml` (nombre, email, Cerrar sesión). En celulares el menú es un offcanvas | ✅ Controllers esperados: `Envios` ✅, `Oportunidades` ✅, `Optimizador` ❌, `Transportes` ✅, `Historial` ✅, `Potencial` ❌ (acción `Index`); si se usa otro nombre, cambiarlo en `_MenuLateral` |
-| — | Tests unitarios por endpoint | — | — | 🟡 `UsuarioServicio`, `ViajeServicio.ObtenerDetalleAsync`, `CrearAsync` (cálculo de ruta) y `ActualizarAsync`; `EnvioServicioTests` (listar, detalle, cancelar con todas las transiciones de `EnvioEstadoMaquina`, crear) y `TransporteServicioTests` (listar, marcar retirado/en camino/entregado con cobertura de "sin saltear estados") completos. Oportunidades sin tests unitarios aún ; rutas: `RutasTests` (inserción del recorrido, `PolylineCodec`, mock y `GeoUtil`), falta testear `RutaServicioGoogle`|
+| — | Tests unitarios por endpoint | — | — | 🟡 `UsuarioServicio`, `ViajeServicio.ObtenerDetalleAsync`, `CrearAsync` (cálculo de ruta) y `ActualizarAsync`; `EnvioServicioTests` (listar, detalle, cancelar con todas las transiciones de `EnvioEstadoMaquina`, crear) y `TransporteServicioTests` (listar, marcar retirado/en camino/entregado con cobertura de "sin saltear estados") completos. Oportunidades sin tests unitarios aún ; rutas: `RutasTests` (inserción del recorrido, `PolylineCodec`, mock y `GeoUtil`), `RutaServicioGoogleTests` (parseo, caché, errores, comparación y geocoding con `HttpMessageHandler` falso) y `RutaServicioConRespaldoTests` (respaldo al mock y pausa ante fallas de red)|
 | — | README (cómo correr y configurar BD desde cero) | — | — | ❌ |
 
 ## 6. Mocks y pendientes transversales
@@ -219,8 +219,15 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
   línea recta), `GeoUtil` (Haversine y prefiltros) y `PolylineCodec`.
 - Selección por configuración: `Rutas:Proveedor` = `Auto` (default: Google si hay key, si no mock) |
   `Google` (falla al arrancar si falta la key) | `Mock`. La key del servidor va en user-secrets de la API:
-  `dotnet user-secrets set "Rutas:GoogleApiKey" "<clave>" --project RuteaYa.API`. El arranque loguea
-  `Servicio de rutas: Google|Mock` (con IIS Express se ve en Salida → Depurar).
+  `dotnet user-secrets set "Rutas:GoogleApiKey" "<clave>" --project RuteaYa.API`. `Rutas:RespaldoAlMock` (default `true`) 
+  activa el respaldo al mock cuando se usa Google. El arranque loguea `Servicio de rutas: Mock | Google (con respaldo al mock) | 
+  Google (sin respaldo)` (con IIS Express se ve en Salida → Depurar).
+- Respaldo (`RutaServicioConRespaldo`, decorador registrado en `Program.cs`): si Google lanza `RutaNoDisponibleException`, 
+  falla la red, hay timeout o la respuesta viene rota, responde con el mock y deja un `LogWarning` 
+  (con el mock, distancias, desvíos y tiempos son simulados). Ante fallas de red o timeout pausa Google durante 60 s para no 
+  esperar el timeout en cada llamada; si es solo una ruta no encontrada o una key inválida, no pausa. 
+  No tapa la cancelación del llamador ni los errores de programación. Para probar que Google anda de verdad, 
+  poner `Rutas:RespaldoAlMock = false`.
 - La key del servidor es **distinta** de la del mapa: sin restricción de sitios web y solo con Routes API.
   **No usar Geocoding API** (exige facturación; el proyecto de Google es un Maps Demo Project sin cuenta de
   facturación, así que no se puede cobrar). Por eso los métodos de texto (`GeocodificarDireccionAsync`,
@@ -245,9 +252,9 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
   en lugar del mapa y el resto del formulario funciona.
 
 **Pendiente**
-- Si Google falla, caer al mock con `LogWarning` (hoy el `catch` de `OportunidadesServicio` descarta cada envío y
-  la lista queda vacía).
-- Tests de `RutaServicioGoogle` (con `HttpMessageHandler` falso) y de `RutasOpciones.UsarGoogle()`.
+- Tests de `RutasOpciones.UsarGoogle()`.
+- Con `Rutas:RespaldoAlMock = false` y Google caído, Oportunidades muestra la lista vacía: el `catch` de 
+  `OportunidadesServicio` descarta cada envío sin avisar (sugerir a Seba que al menos loguee un warning).
 - Borrar los métodos de texto de `IRutaServicio` y migrar `RutasController`.
 - Buscador de direcciones real (hoy lista fija).
 
@@ -420,3 +427,4 @@ Entregado), Palermo → Avellaneda ($7.000, 8 kg), Caballito → Lomas ($4.000, 
 - Sin `GoogleMaps:ApiKey` el mapa se reemplaza por un aviso; sin `Rutas:GoogleApiKey` la API usa el mock (modo `Auto`). Con `Rutas:Proveedor = Google` y sin key, la API no arranca.
 - Los user-secrets de la API solo se cargan en `Development`. Las dos claves de Google son distintas: la del servidor nunca va en el MVC.
 - `dotnet build` falla con MSB3027 ("archivo bloqueado por IIS Express") si la API o el MVC siguen corriendo: detené la depuración antes de compilar.
+- Con `Rutas:RespaldoAlMock = true` (default) una key inválida o una caída de Google no se nota en pantalla: Oportunidades responde con valores del mock. Mirar el log (`RutaServicioConRespaldo: Warning`) para saber si se está usando el respaldo.
