@@ -268,24 +268,6 @@ namespace RuteaYa.Tests
                 () => servicio.GeocodificarDireccionAsync("Calle que no existe 123"));
         }
 
-        [Fact]
-        public async Task ObtenerDetalleOportunidadAsync_Legado_GeocodificaYComparaConCoordenadas()
-        {
-            var manejador = new ManejadorFalso();
-            // Cuatro direcciones distintas -> cuatro geocodificaciones, más dos rutas.
-            for (int i = 0; i < 4; i++)
-            {
-                manejador.Encolar(HttpStatusCode.OK, RespuestaGeocodificacion);
-            }
-            manejador.Encolar(HttpStatusCode.OK, RespuestaRuta(18400, 3300));
-            manejador.Encolar(HttpStatusCode.OK, RespuestaRuta(21400, 3840));
-            var servicio = CrearServicio(manejador);
-
-            var detalle = await servicio.ObtenerDetalleOportunidadAsync("Belgrano", "Lomas", "Palermo", "Avellaneda");
-
-            Assert.Equal(3.0m, detalle.DesvioKm);
-            Assert.Equal(6, manejador.CantidadPeticiones);
-        }
 
         // Handler que devuelve respuestas encoladas en orden y registra lo que recibió.
         private sealed class ManejadorFalso : HttpMessageHandler

@@ -155,50 +155,6 @@ namespace RuteaYa.API.Servicios.Rutas
         }
 
         // --- Métodos de texto (legado): geocodifican y delegan en los de coordenadas. ---
-        // TODO Servicio de rutas: borrarlos cuando ViajeServicio y OportunidadesServicio migren a coordenadas.
-
-        public async Task<RutaResultadoDto> CalcularRutaConParadasAsync(List<string> paradas)
-        {
-            var coordenadas = new List<CoordenadaDto>();
-            foreach (var direccion in paradas)
-            {
-                coordenadas.Add(await GeocodificarDireccionAsync(direccion));
-            }
-            return await CalcularRutaAsync(coordenadas);
-        }
-
-        public async Task<RutaResultadoDto> CalcularRutaAlternativaEnvioAsync(
-            string origen, string destino, string retiroPaquete, string entregaPaquete)
-        {
-            var habitual = new List<CoordenadaDto>
-            {
-                await GeocodificarDireccionAsync(origen),
-                await GeocodificarDireccionAsync(destino)
-            };
-            var retiro = await GeocodificarDireccionAsync(retiroPaquete);
-            var entrega = await GeocodificarDireccionAsync(entregaPaquete);
-
-            return await CalcularRutaAsync(InsercionRecorrido.Insertar(habitual, retiro, entrega));
-        }
-
-        public Task<decimal> CalcularDesvioAsync(string rutaOriginalId, string paradaExtra)
-        {
-            throw new NotSupportedException("Usar CompararConEnvioAsync: el desvío sale de comparar dos rutas.");
-        }
-
-        public async Task<DetalleOportunidadRutaDto> ObtenerDetalleOportunidadAsync(
-            string origenHabitual, string destinoHabitual, string retiroEnvio, string entregaEnvio)
-        {
-            var habitual = new List<CoordenadaDto>
-            {
-                await GeocodificarDireccionAsync(origenHabitual),
-                await GeocodificarDireccionAsync(destinoHabitual)
-            };
-            var retiro = await GeocodificarDireccionAsync(retiroEnvio);
-            var entrega = await GeocodificarDireccionAsync(entregaEnvio);
-
-            return await CompararConEnvioAsync(habitual, retiro, entrega);
-        }
 
         public Task<List<string>> BuscarDireccionesAsync(string texto)
         {

@@ -144,10 +144,6 @@ namespace RuteaYa.Tests
             }
 
             public Task<CoordenadaDto> GeocodificarDireccionAsync(string direccion) => throw new NotImplementedException();
-            public Task<RutaResultadoDto> CalcularRutaConParadasAsync(List<string> paradas) => throw new NotImplementedException();
-            public Task<RutaResultadoDto> CalcularRutaAlternativaEnvioAsync(string origen, string destino, string retiroPaquete, string entregaPaquete) => throw new NotImplementedException();
-            public Task<decimal> CalcularDesvioAsync(string rutaOriginalId, string paradaExtra) => throw new NotImplementedException();
-            public Task<DetalleOportunidadRutaDto> ObtenerDetalleOportunidadAsync(string origenHabitual, string destinoHabitual, string retiroEnvio, string entregaEnvio) => throw new NotImplementedException();
             public Task<List<string>> BuscarDireccionesAsync(string texto) => throw new NotImplementedException();
         }
 
