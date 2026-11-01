@@ -165,13 +165,15 @@ Cualquier transición de estado de envío nueva debe agregarse a la tabla de `En
 no reimplementarse en el servicio que la dispara.
 
 ### 4.2 Motor de compatibilidad (Oportunidades)
-`OportunidadesServicio.EvaluarAsync(viaje, envio, ...)` aplica las reglas en este orden y devuelve el
+`OportunidadesServicio.EvaluarInternoAsync(viaje, envio, ...)` (expuesto como `EvaluarCompatibilidadAsync`) aplica las reglas en este orden y devuelve el
 primer motivo por el que el envío no entra (o ninguno), la `FechaViaje` y la comparación de rutas:
 1. Viaje activo y del usuario (si no es del usuario, el servicio devuelve null / `NoEncontrado` → 404).
 2. Envío de otro usuario, en `BuscandoConductor` y sin `Asignacion`; `FechaLimite` ≥ hoy.
-3. **Fecha:** primera fecha entre hoy y `FechaLimite` que cae en un día del viaje **y** tiene lugar.
-4. **Capacidad por salida:** solo cuentan las asignaciones del viaje con esa `FechaViaje` cuyo envío no
-   está `Cancelado` (las de otras fechas no ocupan lugar). Paquetes y kg.
+3. **Fecha:** primera fecha entre hoy y `FechaLimite` que cae en un día del viaje.
+4. **Capacidad del viaje** (`CapacidadRestante(viaje)`): `MaxPaquetes` y `PesoMaxKg` son límites del **viaje**,
+   no de cada salida. Ocupan lugar los envíos aceptados que todavía no se entregaron (`ConductorAsignado`,
+   `Retirado`, `EnCamino`), sea cual sea su `FechaViaje`; los `Entregado` y `Cancelado` liberan lugar.
+   El Optimizador arma las combinaciones dentro de ese lugar libre.
 5. **Desvío** (`IRutaServicio.CompararConEnvioAsync`) ≤ `DesvioMaxKm`. En el listado hay un prefiltro en línea
    recta (hasta 1,5 × el máximo) para no consultar rutas de más. Si la ruta falla: `LogWarning` y se descarta.
 - Compatibilidad = desvío / desvío máximo: ≤ 0,3 "Muy compatible", ≤ 0,5 "Compatible", si no "Mucho desvío";
@@ -179,8 +181,10 @@ primer motivo por el que el envío no entra (o ninguno), la `FechaViaje` y la co
 - "Hoy" es la fecha de Argentina (UTC − 3), igual que en las vistas.
 - `AceptarAsync` vuelve a evaluar todo (las restricciones pueden haber cambiado) y devuelve
   `ResultadoAsignacion` (`ResultadoOperacion` + mensaje para el 409 + `AsignacionDto`).
-- Para el Optimizador / Potencial: reusar `EvaluarAsync` (hoy es privado; exponerlo cuando se necesite)
-  en vez de reimplementar las reglas.
+- Para el Optimizador / Potencial: reusar `EvaluarCompatibilidadAsync` y `CapacidadRestante` en vez de
+  reimplementar las reglas.
+- `OportunidadesViajeDto.PaquetesDisponibles/KgDisponibles`: lugar libre del viaje; la pantalla lo muestra y,
+  si llegó al límite, avisa en lugar de listar.
 
 ## 5. Estado por funcionalidad
 
@@ -206,7 +210,7 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 | — | Servicio de rutas/mapas | ✅ `IRutaServicio` con coordenadas (`CalcularRutaAsync`, `CompararConEnvioAsync`) + `RutaServicioGoogle` (Routes API, caché) + `RutaServicioMock`, elegidas por `Rutas:Proveedor`. `RutasController` conserva endpoints de texto (legado) . RutaServicioConRespaldo (decorador): si Google falla responde con el mock y loguea un warning | — | 🟡 Google funcionando y mock sin key o como respaldo si Google falla; lo usan `ViajeServicio` (distancia/duración) y `OportunidadesServicio` (desvío). Falta: borrar los métodos de texto (usan Geocoding, que exige facturación), test de `RutasOpciones.UsarGoogle()` y direcciones reales (hoy lista fija) |
 | — | Máquina de estados de envío | ✅ `EnvioEstadoMaquina` (estática, `API/Servicios/`): única fuente de verdad de las transiciones de `EstadoEnvio` (ver 4.1) | — | ✅ Usada por Cancelar (Pantalla 7), aceptar oportunidad (`→ ConductorAsignado`, Pantallas 8-9) y retirado/en camino/entregado (Pantalla 12) |
 | — | Layout con sidebar | — | ✅ `_Layout.cshtml` + `_MenuLateral.cshtml` (secciones → `/<Controller>`, activa según el controller actual) + `_MenuUsuario.cshtml` (nombre, email, Cerrar sesión). En celulares el menú es un offcanvas | ✅ Controllers esperados: `Envios` ✅, `Oportunidades` ✅, `Optimizador` ✅, `Transportes` ✅, `Historial` ✅, `Potencial` ❌ (acción `Index`); si se usa otro nombre, cambiarlo en `_MenuLateral` |
-| — | Tests unitarios por endpoint | — | — | 🟡 `UsuarioServicio`, `ViajeServicio.ObtenerDetalleAsync`, `CrearAsync` (cálculo de ruta) y `ActualizarAsync`; `EnvioServicioTests` (listar, detalle, cancelar con todas las transiciones de `EnvioEstadoMaquina`, crear) y `TransporteServicioTests` (listar, marcar retirado/en camino/entregado con cobertura de "sin saltear estados") completos. `OportunidadesServicioTests` (propietario, viaje inactivo, envíos propios/no disponibles, fecha/día, capacidad y peso por fecha de salida, desvío, etiquetas, orden y desempate, falla de ruta, detalle con y sin restricciones, aceptar → `ConductorAsignado` + historial, conflictos e índice único); `OptimizadorServicioTests` (ejemplo de la sección 12, empates resueltos por menor desvío, criterios ganancia/desvío/equilibrio, restricciones de capacidad, peso, desvío, envíos propios y casos límite); rutas: `RutasTests` (inserción del recorrido, `PolylineCodec`, mock y `GeoUtil`), `RutaServicioGoogleTests` (parseo, caché, errores, comparación y geocoding con `HttpMessageHandler` falso) y `RutaServicioConRespaldoTests` (respaldo al mock y pausa ante fallas de red)|
+| — | Tests unitarios por endpoint | — | — | 🟡 `UsuarioServicio`, `ViajeServicio.ObtenerDetalleAsync`, `CrearAsync` (cálculo de ruta) y `ActualizarAsync`; `EnvioServicioTests` (listar, detalle, cancelar con todas las transiciones de `EnvioEstadoMaquina`, crear) y `TransporteServicioTests` (listar, marcar retirado/en camino/entregado con cobertura de "sin saltear estados") completos. `OportunidadesServicioTests` (propietario, viaje inactivo, envíos propios/no disponibles, fecha/día, límite de paquetes y peso del viaje contando los ya aceptados (también aceptando uno tras otro), desvío, etiquetas, orden y desempate, falla de ruta, detalle con y sin restricciones, aceptar → `ConductorAsignado` + historial, conflictos e índice único); `OptimizadorServicioTests` (ejemplo de la sección 12, empates resueltos por menor desvío, criterios ganancia/desvío/equilibrio, restricciones de capacidad, peso, desvío, envíos propios y casos límite, lugar libre con envíos ya aceptados); rutas: `RutasTests` (inserción del recorrido, `PolylineCodec`, mock y `GeoUtil`), `RutaServicioGoogleTests` (parseo, caché, errores, comparación y geocoding con `HttpMessageHandler` falso) y `RutaServicioConRespaldoTests` (respaldo al mock y pausa ante fallas de red)|
 | — | README (cómo correr y configurar BD desde cero) | — | — | ❌ |
 
 ## 6. Mocks y pendientes transversales
@@ -318,8 +322,8 @@ autenticación. Cerrar sesión desde el menú del usuario.
 ### 7.3 Reglas de negocio generales
 - Nadie modifica ni ve viajes/envíos de otro usuario (404 o 403; se sugiere 404 para no revelar existencia).
 - Un envío se asigna una sola vez; no aceptar envíos ya asignados o cancelados.
-- Un viaje no supera su cantidad máxima de paquetes ni su peso máximo (contando asignaciones ya
-  existentes para esa fecha), ni el desvío máximo.
+- Un viaje no supera su cantidad máxima de paquetes ni su peso máximo (contando los envíos ya aceptados
+  y no entregados del viaje, en cualquier fecha), ni el desvío máximo.
 - Compatibilidad considera recorrido del viaje y recorrido necesario para el paquete
   (origen/destino del envío respetando el orden del recorrido: el retiro antes que la entrega).
 - Fecha: el envío debe poder hacerse en una fecha en que el viaje ocurre (día de la semana del viaje,

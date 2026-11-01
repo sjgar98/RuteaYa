@@ -130,6 +130,30 @@ namespace RuteaYa.Tests
         }
 
         [Fact]
+        public async Task OptimizarAsync_ViajeConEnviosYaAceptados_SoloUsaElLugarLibre()
+        {
+            // 3 paquetes / 10 kg de máximo, con 2 paquetes y 7 kg ya aceptados: queda 1 paquete y 3 kg.
+            var viaje = CrearViaje(maxPaquetes: 3, pesoMaxKg: 10m, desvioMaxKm: 5m);
+            foreach (var (id, peso) in new[] { (50, 4m), (51, 3m) })
+            {
+                var aceptado = CrearEnvio(id, pesoKg: peso);
+                aceptado.Estado = EstadoEnvio.ConductorAsignado;
+                viaje.Asignaciones.Add(new Asignacion { ViajeId = ViajeId, EnvioId = id, FechaViaje = Hoy, Envio = aceptado });
+            }
+            _viajes.Viajes.Add(viaje);
+            _envios.Envios.Add(CrearEnvio(1, monto: 4000m, pesoKg: 2m));
+            _envios.Envios.Add(CrearEnvio(2, monto: 2500m, pesoKg: 1m));
+            _envios.Envios.Add(CrearEnvio(3, monto: 9000m, pesoKg: 5m));
+
+            var resultado = await CrearServicio().OptimizarAsync(ConductorId, ViajeId, "ganancia");
+
+            var optima = resultado!.Optima;
+            Assert.Equal(1, optima.CantidadPaquetes);
+            Assert.Equal(new[] { 1 }, optima.Envios.Select(e => e.EnvioId));
+            Assert.All(resultado.OtrasCombinaciones, c => Assert.True(c.CantidadPaquetes <= 1 && c.PesoTotalKg <= 3m));
+        }
+
+        [Fact]
         public async Task OptimizarAsync_EjemploEnunciado_DevolverOtrasCombinacionesValidas()
         {
             _viajes.Viajes.Add(CrearViaje(maxPaquetes: 3, pesoMaxKg: 10m, desvioMaxKm: 5m));
