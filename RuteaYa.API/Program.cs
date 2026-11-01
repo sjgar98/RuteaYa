@@ -56,24 +56,39 @@ builder.Services.AddMemoryCache();
 builder.Services.Configure<RutasOpciones>(builder.Configuration.GetSection("Rutas"));
 builder.Services.AddScoped<RutaServicioMock>();
 builder.Services.AddHttpClient<RutaServicioGoogle>(cliente => cliente.Timeout = TimeSpan.FromSeconds(10));
+builder.Services.AddHttpClient<RutaServicioOsrm>((sp, cliente) =>
+{
+    var opciones = sp.GetRequiredService<IOptions<RutasOpciones>>().Value;
+    cliente.BaseAddress = new Uri(opciones.OsrmUrl.TrimEnd('/') + "/");
+    cliente.Timeout = TimeSpan.FromSeconds(10);
+    cliente.DefaultRequestHeaders.UserAgent.ParseAdd("RuteaYa-TP/1.0 (trabajo practico universitario)");
+});
 builder.Services.AddScoped<IRutaServicio>(sp =>
 {
     var opciones = sp.GetRequiredService<IOptions<RutasOpciones>>().Value;
     var mock = sp.GetRequiredService<RutaServicioMock>();
 
-    if (!opciones.UsarGoogle())
+    IRutaServicio principal;
+    if (opciones.UsarGoogle())
+    {
+        principal = sp.GetRequiredService<RutaServicioGoogle>();
+    }
+    else if (opciones.UsarOsrm())
+    {
+        principal = sp.GetRequiredService<RutaServicioOsrm>();
+    }
+    else
     {
         return mock;
     }
 
-    var google = sp.GetRequiredService<RutaServicioGoogle>();
     if (!opciones.RespaldoAlMock)
     {
-        return google;
+        return principal;
     }
 
     return new RutaServicioConRespaldo(
-        google, mock, sp.GetRequiredService<IMemoryCache>(), sp.GetRequiredService<ILogger<RutaServicioConRespaldo>>());
+        principal, mock, sp.GetRequiredService<IMemoryCache>(), sp.GetRequiredService<ILogger<RutaServicioConRespaldo>>());
 });
 
 
@@ -140,10 +155,10 @@ var app = builder.Build();
 //app.Logger.LogInformation("Servicio de rutas: {Proveedor}",
 //    app.Services.GetRequiredService<IOptions<RutasOpciones>>().Value.UsarGoogle() ? "Google" : "Mock");
 var opcionesRutas = app.Services.GetRequiredService<IOptions<RutasOpciones>>().Value;
-app.Logger.LogInformation("Servicio de rutas: {Proveedor}",
-    !opcionesRutas.UsarGoogle() ? "Mock"
-    : opcionesRutas.RespaldoAlMock ? "Google (con respaldo al mock)"
-    : "Google (sin respaldo)");
+string proveedorRutas = opcionesRutas.UsarGoogle() ? "Google" : opcionesRutas.UsarOsrm() ? "OSRM" : "Mock";
+string respaldoRutas = proveedorRutas == "Mock" ? string.Empty
+    : opcionesRutas.RespaldoAlMock ? " (con respaldo al mock)" : " (sin respaldo)";
+app.Logger.LogInformation("Servicio de rutas: {Proveedor}{Respaldo}", proveedorRutas, respaldoRutas);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
