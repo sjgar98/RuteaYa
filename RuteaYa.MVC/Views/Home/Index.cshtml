@@ -1,8 +1,137 @@
+@using System.Security.Claims
+@model RuteaYa.DTOs.DashboardDto
 @{
-    ViewData["Title"] = "Home";
+    ViewData["Title"] = "Inicio";
+
+    var nombre = User.FindFirstValue(ClaimTypes.GivenName);
+    var hoy = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(-3));
+
+    string Dia(DateOnly fecha) => fecha == hoy ? "Hoy"
+        : fecha == hoy.AddDays(1) ? "Mañana"
+        : $"{fecha.ADiaSemana().Abreviar()} {fecha:d/M}";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Home</h1>
-    <p>Vista servida por <code>HomeController.Index</code>.</p>
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+    <div>
+        <h1 class="h3 mb-0">Hola, @nombre</h1>
+        <p class="text-muted small mb-0">Este es el resumen de tus viajes y envíos.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-secondary btn-sm" asp-controller="Envios" asp-action="Nuevo">Nuevo envío</a>
+        <a class="btn btn-dark btn-sm" asp-controller="Viajes" asp-action="Nuevo">Nuevo viaje</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <a class="card border-0 shadow-sm rounded-4 h-100 dashboard-kpi" asp-controller="Viajes" asp-action="Index" asp-route-activo="true">
+            <div class="card-body">
+                <div class="text-muted small">Próximos viajes</div>
+                <div class="dashboard-kpi-valor">@Model.CantidadProximasSalidas</div>
+                <div class="text-muted small">en los próximos 7 días</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-lg-3">
+        <a class="card border-0 shadow-sm rounded-4 h-100 dashboard-kpi" asp-controller="Envios" asp-action="Index">
+            <div class="card-body">
+                <div class="text-muted small">Envíos pendientes</div>
+                <div class="dashboard-kpi-valor">@Model.CantidadEnviosPendientes</div>
+                <div class="text-muted small">sin entregar</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-lg-3">
+        <a class="card border-0 shadow-sm rounded-4 h-100 dashboard-kpi" asp-controller="Oportunidades" asp-action="Index">
+            <div class="card-body">
+                <div class="text-muted small">Oportunidades</div>
+                <div class="dashboard-kpi-valor">@Model.CantidadOportunidades</div>
+                <div class="text-muted small">
+                    para @Model.ViajesActivos @(Model.ViajesActivos == 1 ? "viaje activo" : "viajes activos")
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-lg-3">
+        <a class="card border-0 shadow-sm rounded-4 h-100 dashboard-kpi" asp-controller="Optimizador" asp-action="Index">
+            <div class="card-body">
+                <div class="text-muted small">Potencial del mes</div>
+                <div class="dashboard-kpi-valor">@Model.PotencialMes.Moneda()</div>
+                <div class="text-muted small"
+                     title="Estimado: la mejor combinación de envíos de cada viaje activo para este mes. No es dinero ganado.">
+                    estimado · @Model.PaquetesPotencialMes @(Model.PaquetesPotencialMes == 1 ? "paquete" : "paquetes")
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body pb-0 d-flex justify-content-between align-items-center">
+                <h2 class="h6 mb-0">Próximos viajes</h2>
+                <a class="small" asp-controller="Viajes" asp-action="Index">Ver todos</a>
+            </div>
+            @if (Model.ProximasSalidas.Count == 0)
+            {
+                <div class="card-body text-center text-muted py-5">
+                    <p class="mb-2">No tenés viajes en los próximos 7 días.</p>
+                    <a class="btn btn-outline-secondary btn-sm" asp-controller="Viajes" asp-action="Nuevo">Registrar un viaje</a>
+                </div>
+            }
+            else
+            {
+                <ul class="list-group list-group-flush rounded-bottom-4 mt-2">
+                    @foreach (var salida in Model.ProximasSalidas)
+                    {
+                        <li class="list-group-item d-flex align-items-center gap-3 py-3">
+                            <div class="dashboard-fecha">
+                                <div class="fw-semibold">@Dia(salida.Fecha)</div>
+                                <div class="text-muted small">@salida.HoraSalida.ToString("HH:mm")</div>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="fw-semibold text-truncate">@salida.OrigenDir → @salida.DestinoDir</div>
+                                <div class="text-muted small">Llegada @salida.HoraLlegada.ToString("HH:mm")</div>
+                            </div>
+                            <a class="btn btn-outline-secondary btn-sm" asp-controller="Viajes" asp-action="Detalle" asp-route-id="@salida.ViajeId">Ver</a>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body pb-0 d-flex justify-content-between align-items-center">
+                <h2 class="h6 mb-0">Envíos pendientes</h2>
+                <a class="small" asp-controller="Envios" asp-action="Index">Ver todos</a>
+            </div>
+            @if (Model.EnviosPendientes.Count == 0)
+            {
+                <div class="card-body text-center text-muted py-5">
+                    <p class="mb-2">No tenés envíos en curso.</p>
+                    <a class="btn btn-outline-secondary btn-sm" asp-controller="Envios" asp-action="Nuevo">Publicar un envío</a>
+                </div>
+            }
+            else
+            {
+                <ul class="list-group list-group-flush rounded-bottom-4 mt-2">
+                    @foreach (var envio in Model.EnviosPendientes)
+                    {
+                        <li class="list-group-item d-flex align-items-center gap-3 py-3">
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="fw-semibold text-truncate">@envio.Descripcion</div>
+                                <div class="text-muted small text-truncate">@envio.OrigenDir → @envio.DestinoDir</div>
+                                <div class="text-muted small">Hasta el @envio.FechaLimite.ToString("dd/MM") · @envio.Monto.Moneda()</div>
+                            </div>
+                            <span class="badge rounded-pill @envio.Estado.ClaseBadge()">@envio.Estado.Texto()</span>
+                            <a class="btn btn-outline-secondary btn-sm" asp-controller="Envios" asp-action="Detalle" asp-route-id="@envio.Id">Ver</a>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
 </div>
