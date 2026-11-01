@@ -13,6 +13,7 @@ using RuteaYa.Repositorios;
 using RuteaYa.Repositorios.Interfaces;
 using RuteaYa.API.Servicios.Rutas;
 using Microsoft.Extensions.Caching.Memory;
+using RuteaYa.API.Servicios.Direcciones;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,6 +75,38 @@ builder.Services.AddScoped<IRutaServicio>(sp =>
     return new RutaServicioConRespaldo(
         google, mock, sp.GetRequiredService<IMemoryCache>(), sp.GetRequiredService<ILogger<RutaServicioConRespaldo>>());
 });
+
+
+builder.Services.Configure<DireccionesOpciones>(builder.Configuration.GetSection("Direcciones"));
+builder.Services.AddScoped<DireccionServicioFijo>();
+builder.Services.AddHttpClient<DireccionServicioPhoton>((sp, cliente) =>
+{
+    var opciones = sp.GetRequiredService<IOptions<DireccionesOpciones>>().Value;
+    cliente.BaseAddress = new Uri(opciones.PhotonUrl.TrimEnd('/') + "/");
+    cliente.Timeout = TimeSpan.FromSeconds(5);
+    cliente.DefaultRequestHeaders.UserAgent.ParseAdd("RuteaYa-TP/1.0 (trabajo practico universitario)");
+});
+builder.Services.AddScoped<IDireccionServicio>(sp =>
+{
+    var opciones = sp.GetRequiredService<IOptions<DireccionesOpciones>>().Value;
+    var fijo = sp.GetRequiredService<DireccionServicioFijo>();
+
+    if (!opciones.UsarPhoton())
+    {
+        return fijo;
+    }
+
+    var photon = sp.GetRequiredService<DireccionServicioPhoton>();
+    if (!opciones.RespaldoAlFijo)
+    {
+        return photon;
+    }
+
+    return new DireccionServicioConRespaldo(
+        photon, fijo, sp.GetRequiredService<IMemoryCache>(), sp.GetRequiredService<ILogger<DireccionServicioConRespaldo>>());
+});
+
+
 builder.Services.AddScoped<IHistorialServicio, HistorialServicio>();
 builder.Services.AddScoped<IEnvioServicio, EnvioServicio>();
 builder.Services.AddScoped<ITransporteServicio, TransporteServicio>();
@@ -102,6 +135,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 var app = builder.Build();
+
 
 //app.Logger.LogInformation("Servicio de rutas: {Proveedor}",
 //    app.Services.GetRequiredService<IOptions<RutasOpciones>>().Value.UsarGoogle() ? "Google" : "Mock");
