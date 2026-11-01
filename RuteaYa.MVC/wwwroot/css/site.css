@@ -239,3 +239,27 @@ html {
     width: 100%;
     border-radius: .5rem;
 }
+/* Dashboard */
+.dashboard-kpi {
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.1s ease-in-out;
+}
+
+.dashboard-kpi:hover {
+  transform: translateY(-2px);
+}
+
+.dashboard-kpi-valor {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.dashboard-fecha {
+  flex: 0 0 4.5rem;
+}
+
+.min-w-0 {
+  min-width: 0;
+}
