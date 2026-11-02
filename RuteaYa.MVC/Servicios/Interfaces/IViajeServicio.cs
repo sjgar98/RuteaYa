@@ -1,5 +1,6 @@
 using RuteaYa.DTOs;
 using RuteaYa.MVC.Models;
+using RuteaYa.DTOs.Rutas;
 
 namespace RuteaYa.MVC.Servicios.Interfaces
 {
@@ -20,5 +21,7 @@ namespace RuteaYa.MVC.Servicios.Interfaces
         Task<ResultadoCambioEstado> ActivarAsync(int id);
 
         Task<List<DireccionDto>> BuscarDireccionesAsync(string texto);
+        // null si la API no pudo calcular la ruta (el mapa dibuja entonces una línea recta).
+        Task<RutaResultadoDto?> CalcularRutaAsync(List<CoordenadaDto> recorrido);
     }
 }
