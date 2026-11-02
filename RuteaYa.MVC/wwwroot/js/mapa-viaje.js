@@ -1,11 +1,16 @@
-﻿(function () {
+﻿// Mapa del recorrido (Nuevo/Editar viaje y Detalle del viaje), con Leaflet y tiles de OpenStreetMap.
+(function () {
     'use strict';
 
-    const CENTRO_POR_DEFECTO = { lat: -34.6037, lng: -58.3816 };
+    const CENTRO_POR_DEFECTO = [-34.6037, -58.3816];
+    // La API codifica la polilínea con precisión 1e5. Si la ruta aparece corrida o lejos, probar con 6.
+    const PRECISION = 5;
+    const TILES_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    const ATRIBUCION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+
     let mapa;
-    let Route;
-    let polilineas = [];
-    let marcadores = [];
+    let capas;
+    let urlRuta;
     let numeroPedido = 0;
 
     function mostrarEstado(texto) {
@@ -33,6 +38,7 @@
             };
         }
 
+        // Formulario: coordenadas ocultas que completa formulario-viaje.js.
         const valor = selector => document.querySelector(selector)?.value;
         return {
             origen: punto(valor('#OrigenLat'), valor('#OrigenLng')),
@@ -44,87 +50,120 @@
         };
     }
 
-    function limpiar() {
-        polilineas.forEach(p => p.setMap(null));
-        marcadores.forEach(m => m.setMap(null));
-        polilineas = [];
-        marcadores = [];
+    function decodificar(codificado) {
+        const factor = Math.pow(10, PRECISION);
+        const puntos = [];
+        let indice = 0;
+        let lat = 0;
+        let lng = 0;
+
+        function leerValor() {
+            let resultado = 0;
+            let desplazamiento = 0;
+            let bloque;
+            do {
+                bloque = codificado.charCodeAt(indice++) - 63;
+                resultado |= (bloque & 0x1f) << desplazamiento;
+                desplazamiento += 5;
+            } while (bloque >= 0x20);
+            return (resultado & 1) ? ~(resultado >> 1) : (resultado >> 1);
+        }
+
+        while (indice < codificado.length) {
+            lat += leerValor();
+            lng += leerValor();
+            puntos.push([lat / factor, lng / factor]);
+        }
+        return puntos;
     }
 
-    function agregarMarcador(posicion, etiqueta, titulo) {
-        marcadores.push(new google.maps.Marker({ map: mapa, position: posicion, label: etiqueta, title: titulo }));
+    function pin(posicion, etiqueta, titulo) {
+        const icono = L.divIcon({
+            className: '',
+            html: `<div class="mapa-pin">${etiqueta}</div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+        return L.marker(posicion, { icon: icono, title: titulo });
+    }
+
+    // Única parte que depende del contrato de Viajes/CalcularRuta: GET con "puntos=lat,lng;lat,lng;..." y respuesta con "polyline".
+    async function pedirTrazado(puntos) {
+        const lista = puntos.map(p => `${p.lat},${p.lng}`).join(';');
+        const respuesta = await fetch(`${urlRuta}?puntos=${encodeURIComponent(lista)}`);
+        if (!respuesta.ok) {
+            throw new Error(`Viajes/CalcularRuta respondió ${respuesta.status}`);
+        }
+
+        const resultado = await respuesta.json();
+        if (resultado.polyline) {
+            return decodificar(resultado.polyline);
+        }
+        return (resultado.puntosRecorrido || []).map(p => [p.latitud ?? p.lat, p.longitud ?? p.lng]);
     }
 
     async function calcularRuta() {
         const { origen, destino, paradas } = leerRecorrido();
         const pedido = ++numeroPedido;
 
-        limpiar();
+        capas.clearLayers();
         if (!origen || !destino) {
             mostrarEstado('Elegí origen y destino de la lista para ver la ruta.');
             return;
         }
 
+        const puntos = [origen, ...paradas, destino];
+        const latLngs = puntos.map(p => [p.lat, p.lng]);
+
+        // Los marcadores se dibujan enseguida; el trazado llega después del servidor.
+        pin(latLngs[0], 'A', 'Origen').addTo(capas);
+        paradas.forEach((p, i) => pin([p.lat, p.lng], String(i + 1), `Parada ${i + 1}`).addTo(capas));
+        pin(latLngs[latLngs.length - 1], 'B', 'Destino').addTo(capas);
+        mapa.fitBounds(L.latLngBounds(latLngs), { padding: [30, 30] });
+
         mostrarEstado('Calculando ruta…');
         try {
-            const { routes } = await Route.computeRoutes({
-                origin: origen,
-                destination: destino,
-                intermediates: paradas,
-                travelMode: 'DRIVING',
-                fields: ['path', 'viewport']
-            });
-
-           
+            const trazado = await pedirTrazado(puntos);
             if (pedido !== numeroPedido) {
                 return;
             }
-            if (!routes?.length) {
-                mostrarEstado('No se encontró una ruta para este recorrido.');
-                return;
+            if (!trazado.length) {
+                throw new Error('La respuesta no trae trazado.');
             }
 
-            const ruta = routes[0];
-            polilineas = ruta.createPolylines();
-            polilineas.forEach(p => p.setMap(mapa));
-
-            agregarMarcador(origen, 'A', 'Origen');
-            paradas.forEach((p, i) => agregarMarcador(p, String(i + 1), `Parada ${i + 1}`));
-            agregarMarcador(destino, 'B', 'Destino');
-
-            if (ruta.viewport) {
-                mapa.fitBounds(ruta.viewport);
-            }
+            L.polyline(trazado, { color: '#0d6efd', weight: 5, opacity: 0.9 }).addTo(capas);
+            mapa.fitBounds(L.latLngBounds(trazado), { padding: [30, 30] });
             mostrarEstado('');
         } catch (error) {
-            console.warn('No se pudo calcular la ruta:', error);
+            console.warn('No se pudo calcular el trazado:', error);
             if (pedido === numeroPedido) {
-                mostrarEstado('No se pudo calcular la ruta. Probá de nuevo con "Actualizar ruta".');
+                L.polyline(latLngs, { color: '#6c757d', weight: 3, dashArray: '6 8' }).addTo(capas);
+                mostrarEstado('No se pudo calcular el trazado: se muestra una línea recta entre los puntos.');
             }
         }
     }
 
-    window.initMapaViaje = async function () {
+    function iniciar() {
         const contenedor = document.getElementById('map');
         if (!contenedor) {
             return;
         }
+        urlRuta = contenedor.dataset.urlRuta;
 
-        const { Map } = await google.maps.importLibrary('maps');
-        await google.maps.importLibrary('marker');
-        ({ Route } = await google.maps.importLibrary('routes'));
+        mapa = L.map(contenedor).setView(CENTRO_POR_DEFECTO, 12);
+        L.tileLayer(TILES_URL, { maxZoom: 19, attribution: ATRIBUCION }).addTo(mapa);
+        capas = L.layerGroup().addTo(mapa);
 
-        mapa = new Map(contenedor, {
-            zoom: 12,
-            center: CENTRO_POR_DEFECTO,
-            mapTypeControl: false,
-            streetViewControl: false
-        });
-
-       
+        // Solo existen en el formulario.
         document.getElementById('form-viaje')?.addEventListener('ruta:cambio', calcularRuta);
         document.getElementById('ruta-calcular')?.addEventListener('click', calcularRuta);
 
-        calcularRuta();
-    };
+        calcularRuta(); // Detalle y Editar ya traen datos
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', iniciar);
+    } else {
+        iniciar();
+    }
 })();

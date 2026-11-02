@@ -1,21 +1,12 @@
 ﻿@using RuteaYa.DTOs.Rutas
-@inject IConfiguration Configuration
 @model DetalleOportunidadRutaDto
 @{
-    // Dibuja la ruta habitual y la ruta con el envío (polylines que ya trae el DTO). Sin API key
-    // o sin trazado muestra un aviso en lugar del mapa.
-    var clave = Configuration["GoogleMaps:ApiKey"];
+    // Dibuja la ruta habitual y la ruta con el envío (polylines que ya trae el DTO). Sin trazado muestra un aviso.
     bool hayTrazado = !string.IsNullOrWhiteSpace(Model.RutaHabitual.Polyline)
         && !string.IsNullOrWhiteSpace(Model.RutaConEnvio.Polyline);
 }
 
-@if (string.IsNullOrWhiteSpace(clave))
-{
-    <div class="alert alert-secondary small mb-0" role="status">
-        Mapa no disponible: falta configurar la API key de Google Maps (<code>GoogleMaps:ApiKey</code>).
-    </div>
-}
-else if (!hayTrazado)
+@if (!hayTrazado)
 {
     <div class="alert alert-secondary small mb-0" role="status">
         No hay trazado de ruta disponible para esta oportunidad.
@@ -35,6 +26,6 @@ else
         @Json.Serialize(new { habitual = Model.RutaHabitual.Polyline, conEnvio = Model.RutaConEnvio.Polyline })
     </script>
 
+    <partial name="_LeafletRecursos" />
     <script src="~/js/mapa-comparacion.js" asp-append-version="true"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=@clave&callback=initMapaComparacion&loading=async" async defer></script>
 }

@@ -1,45 +1,31 @@
 ﻿@using RuteaYa.DTOs
-@inject IConfiguration Configuration
 @{
     // Con ViewData["ViajeMapa"] (Detalle) dibuja ese viaje; sin él (formulario) lee origen, destino y
-    // paradas de los inputs. Sin API key muestra un aviso en lugar del mapa.
+    // paradas de los inputs. El trazado lo calcula el servidor (Viajes/CalcularRuta -> api/rutas/calcular).
     var viaje = ViewData["ViajeMapa"] as ViajeDetalleDto;
-    var clave = Configuration["GoogleMaps:ApiKey"];
 }
 
 @if (viaje is null)
 {
     <div class="d-flex justify-content-between align-items-center mb-2">
         <span class="form-label small fw-semibold mb-0">Vista previa de la ruta</span>
-        @if (!string.IsNullOrWhiteSpace(clave))
-        {
-            <button type="button" id="ruta-calcular" class="btn btn-outline-secondary btn-sm">Actualizar ruta</button>
-        }
+        <button type="button" id="ruta-calcular" class="btn btn-outline-secondary btn-sm">Actualizar ruta</button>
     </div>
 }
 
-@if (string.IsNullOrWhiteSpace(clave))
+<div id="map" class="mapa-ruta shadow-sm border" data-url-ruta="@Url.Action("CalcularRuta", "Viajes")"></div>
+<div id="mapa-estado" class="small text-muted mt-1" role="status"></div>
+
+@if (viaje is not null)
 {
-    <div class="alert alert-secondary small mb-0" role="status">
-        Mapa no disponible: falta configurar la API key de Google Maps (<code>GoogleMaps:ApiKey</code>).
-    </div>
+    <script type="application/json" id="mapa-datos">
+        @Json.Serialize(new
+                {
+                        origen = new { lat = viaje.OrigenLat, lng = viaje.OrigenLng },
+                        destino = new { lat = viaje.DestinoLat, lng = viaje.DestinoLng },
+                        paradas = viaje.Paradas.Select(p => new { lat = p.Lat, lng = p.Lng })
+        })</script>
 }
-else
-{
-    <div id="map" class="mapa-ruta shadow-sm border"></div>
-    <div id="mapa-estado" class="small text-muted mt-1" role="status"></div>
 
-    @if (viaje is not null)
-    {
-        <script type="application/json" id="mapa-datos">
-            @Json.Serialize(new
-                    {
-                            origen = new { lat = viaje.OrigenLat, lng = viaje.OrigenLng },
-                            destino = new { lat = viaje.DestinoLat, lng = viaje.DestinoLng },
-                            paradas = viaje.Paradas.Select(p => new { lat = p.Lat, lng = p.Lng })
-            })</script>
-        }
-
-        <script src="~/js/mapa-viaje.js" asp-append-version="true"></script>
-        <script src="https://maps.googleapis.com/maps/api/js?key=@clave&callback=initMapaViaje&loading=async" async defer></script>
-    }
+<partial name="_LeafletRecursos" />
+<script src="~/js/mapa-viaje.js" asp-append-version="true"></script>
