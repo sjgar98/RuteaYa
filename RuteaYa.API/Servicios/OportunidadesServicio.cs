@@ -62,6 +62,10 @@ namespace RuteaYa.API.Servicios
                 DesvioMaxKm = viaje.DesvioMaxKm
             };
 
+            var (paquetesLibres, kgLibres) = CapacidadRestante(viaje);
+            resultado.PaquetesDisponibles = paquetesLibres;
+            resultado.KgDisponibles = kgLibres;
+
             if (!viaje.Activo)
             {
                 return resultado;
@@ -80,7 +84,6 @@ namespace RuteaYa.API.Servicios
                 }
 
                 var fecha = evaluacion.Fecha!.Value;
-                var (paquetesRestantes, kgRestantes) = CapacidadRestante(viaje, fecha);
                 var (compatibilidad, puntuacion) = CalcularCompatibilidad(evaluacion.Ruta!.DesvioKm, viaje.DesvioMaxKm);
 
                 oportunidades.Add(new OportunidadDto
@@ -95,8 +98,8 @@ namespace RuteaYa.API.Servicios
                     FechaViaje = fecha,
                     Compatibilidad = compatibilidad,
                     PuntuacionCompatibilidad = puntuacion,
-                    CapacidadRestantePaquetes = paquetesRestantes,
-                    CapacidadRestanteKg = kgRestantes
+                    CapacidadRestantePaquetes = paquetesLibres,
+                    CapacidadRestanteKg = kgLibres
                 });
             }
 
@@ -121,11 +124,7 @@ namespace RuteaYa.API.Servicios
             var hoy = Hoy();
             var evaluacion = await EvaluarInternoAsync(viaje, envio, usuarioId, hoy, prefiltrar: false);
 
-            // Sin fecha con lugar, la capacidad se muestra para la próxima salida del viaje (si existe).
-            var fechaReferencia = evaluacion.Fecha ?? FechasDelViaje(viaje, hoy, envio.FechaLimite).Cast<DateOnly?>().FirstOrDefault();
-            var (paquetesRestantes, kgRestantes) = fechaReferencia.HasValue
-                ? CapacidadRestante(viaje, fechaReferencia.Value)
-                : (viaje.MaxPaquetes, viaje.PesoMaxKg);
+            var (paquetesRestantes, kgRestantes) = CapacidadRestante(viaje);
 
             var ruta = evaluacion.Ruta ?? new DetalleOportunidadRutaDto();
             ruta.MontoPago = envio.Monto;
@@ -258,8 +257,8 @@ namespace RuteaYa.API.Servicios
                 return evaluacion.ConMotivo("El envío ya venció.");
             }
 
-            var fechas = FechasDelViaje(viaje, hoy, envio.FechaLimite).ToList();
-            evaluacion.Fecha = fechas.Cast<DateOnly?>().FirstOrDefault(f => Entra(viaje, f!.Value, envio.PesoKg));
+            evaluacion.Fecha = FechasDelViaje(viaje, hoy, envio.FechaLimite).Cast<DateOnly?>().FirstOrDefault();
+            var motivoCapacidad = MotivoSinLugar(viaje, envio.PesoKg);
 
             var recorrido = RecorridoHabitual(viaje);
             if (prefiltrar && DesvioEnLineaRectaKm(recorrido, envio) > viaje.DesvioMaxKm * MargenPrefiltro)
@@ -267,22 +266,22 @@ namespace RuteaYa.API.Servicios
                 return evaluacion.ConMotivo("El desvío supera el máximo del viaje.");
             }
 
-            // Antes de consultar rutas, en el listado alcanza con saber que no hay fecha.
-            if (prefiltrar && evaluacion.Fecha == null)
+            // Antes de consultar rutas, en el listado alcanza con saber que no hay fecha o lugar.
+            if (prefiltrar && (evaluacion.Fecha == null || motivoCapacidad != null))
             {
-                return evaluacion.ConMotivo("Sin fecha disponible.");
+                return evaluacion.ConMotivo(motivoCapacidad ?? "Sin fecha disponible.");
             }
 
             evaluacion.Ruta = await CompararConEnvioAsync(recorrido, envio);
 
-            if (fechas.Count == 0)
+            if (evaluacion.Fecha == null)
             {
                 return evaluacion.ConMotivo($"El viaje no sale ningún día antes de la fecha límite del envío ({envio.FechaLimite:dd/MM/yyyy}).");
             }
 
-            if (evaluacion.Fecha == null)
+            if (motivoCapacidad != null)
             {
-                return evaluacion.ConMotivo($"El viaje no tiene lugar (paquetes o peso) en ninguna salida hasta el {envio.FechaLimite:dd/MM/yyyy}.");
+                return evaluacion.ConMotivo(motivoCapacidad);
             }
 
             if (evaluacion.Ruta == null)
@@ -339,20 +338,41 @@ namespace RuteaYa.API.Servicios
             }
         }
 
-        private static bool Entra(Viaje viaje, DateOnly fecha, decimal pesoKg)
+        // null si el envío entra en el lugar libre del viaje; si no, explica qué límite superaría.
+        private static string? MotivoSinLugar(Viaje viaje, decimal pesoKg)
         {
-            var (paquetesRestantes, kgRestantes) = CapacidadRestante(viaje, fecha);
-            return paquetesRestantes >= 1 && kgRestantes >= pesoKg;
+            var (paquetesLibres, kgLibres) = CapacidadRestante(viaje);
+
+            if (paquetesLibres < 1)
+            {
+                return $"El viaje ya tiene {viaje.MaxPaquetes} de {viaje.MaxPaquetes} paquetes aceptados.";
+            }
+
+            if (pesoKg > kgLibres)
+            {
+                var ocupadosKg = viaje.PesoMaxKg - kgLibres;
+                return $"Con este envío el viaje llevaría {ocupadosKg + pesoKg:0.##} kg y el máximo es {viaje.PesoMaxKg:0.##} kg.";
+            }
+
+            return null;
         }
 
-        // La capacidad es por salida: solo cuentan las asignaciones de esa fecha cuyo envío no se canceló.
-        internal static (int Paquetes, decimal Kg) CapacidadRestante(Viaje viaje, DateOnly fecha)
+        // Lugar libre del viaje: el límite de paquetes y de peso es del viaje, no de cada salida. Ocupan lugar
+        // los envíos aceptados que todavía no se entregaron; los entregados y los cancelados lo liberan.
+        internal static (int Paquetes, decimal Kg) CapacidadRestante(Viaje viaje)
         {
             var ocupadas = viaje.Asignaciones
-                .Where(a => a.FechaViaje == fecha && a.Envio?.Estado != EstadoEnvio.Cancelado)
+                .Where(a => a.Envio != null && OcupaLugar(a.Envio.Estado))
                 .ToList();
 
-            return (viaje.MaxPaquetes - ocupadas.Count, viaje.PesoMaxKg - ocupadas.Sum(a => a.Envio?.PesoKg ?? 0));
+            return (viaje.MaxPaquetes - ocupadas.Count, viaje.PesoMaxKg - ocupadas.Sum(a => a.Envio.PesoKg));
+        }
+
+        private static bool OcupaLugar(EstadoEnvio estado)
+        {
+            return estado == EstadoEnvio.ConductorAsignado
+                || estado == EstadoEnvio.Retirado
+                || estado == EstadoEnvio.EnCamino;
         }
 
         internal static (string Texto, decimal Puntuacion) CalcularCompatibilidad(decimal desvioKm, decimal desvioMaxKm)

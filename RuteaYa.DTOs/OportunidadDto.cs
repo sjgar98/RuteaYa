@@ -10,7 +10,7 @@ namespace RuteaYa.DTOs
         public decimal DesvioKm { get; set; }
         public decimal MontoPago { get; set; }
 
-        // Primera fecha en que el viaje sale, con lugar, antes de la fecha límite del envío.
+        // Primera fecha en que el viaje sale antes de la fecha límite del envío.
         public DateOnly FechaViaje { get; set; }
 
         // "Muy compatible", "Compatible" o "Mucho desvío", según el desvío respecto del máximo del viaje.
@@ -19,7 +19,7 @@ namespace RuteaYa.DTOs
         // 0 a 1: 1 es sin desvío, 0 es el desvío máximo del viaje.
         public decimal PuntuacionCompatibilidad { get; set; }
 
-        // Lugar que le queda al viaje en FechaViaje antes de aceptar este envío.
+        // Lugar que le queda al viaje antes de aceptar este envío.
         public int CapacidadRestantePaquetes { get; set; }
         public decimal CapacidadRestanteKg { get; set; }
     }

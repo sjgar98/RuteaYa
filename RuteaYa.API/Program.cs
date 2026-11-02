@@ -127,6 +127,7 @@ builder.Services.AddScoped<IEnvioServicio, EnvioServicio>();
 builder.Services.AddScoped<ITransporteServicio, TransporteServicio>();
 builder.Services.AddScoped<IOportunidadesServicio, OportunidadesServicio>();
 builder.Services.AddScoped<IOptimizadorServicio, OptimizadorServicio>();
+builder.Services.AddScoped<IDashboardServicio, DashboardServicio>();
 
 builder.Services.AddDbContext<RuteaYaDbContext>();
 

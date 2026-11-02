@@ -24,12 +24,13 @@ namespace RuteaYa.Tests
 
         private readonly ViajeRepositorioFalso _viajes = new ViajeRepositorioFalso();
         private readonly EnvioRepositorioFalso _envios = new EnvioRepositorioFalso();
-        private readonly AsignacionRepositorioFalso _asignaciones = new AsignacionRepositorioFalso();
+        private readonly AsignacionRepositorioFalso _asignaciones;
         private readonly RutaServicioFalso _rutas;
 
         public OportunidadesServicioTests()
         {
             _rutas = new RutaServicioFalso(_envios);
+            _asignaciones = new AsignacionRepositorioFalso(_viajes);
         }
 
         private OportunidadesServicio CrearServicio()
@@ -151,9 +152,9 @@ namespace RuteaYa.Tests
         }
 
         [Fact]
-        public async Task ListarAsync_LaCapacidadSeCuentaPorFechaDeSalida()
+        public async Task ListarAsync_ViajeConTodosLosPaquetesAceptados_NoOfreceMasAunqueSalgaOtrosDias()
         {
-            // Un solo paquete por salida: hoy ya está ocupado, mañana no.
+            // El límite es del viaje: aunque el envío aceptado sea para hoy, mañana tampoco hay lugar.
             var viaje = CrearViaje(maxPaquetes: 1);
             viaje.Asignaciones.Add(CrearAsignacion(Hoy, CrearEnvio(50, estado: EstadoEnvio.ConductorAsignado)));
             _viajes.Viajes.Add(viaje);
@@ -161,13 +162,31 @@ namespace RuteaYa.Tests
 
             var resultado = await CrearServicio().ListarAsync(ConductorId, ViajeId);
 
-            var oportunidad = Assert.Single(resultado!.Oportunidades);
-            Assert.Equal(Hoy.AddDays(1), oportunidad.FechaViaje);
-            Assert.Equal(1, oportunidad.CapacidadRestantePaquetes);
+            Assert.Empty(resultado!.Oportunidades);
+            Assert.Equal(0, resultado.PaquetesDisponibles);
         }
 
         [Fact]
-        public async Task ListarAsync_AsignacionesEntregadasDeOtrasFechasYCanceladasNoOcupanLugar()
+        public async Task ListarAsync_DescartaEnviosQueSuperanElPesoLibreContandoLosYaAceptados()
+        {
+            // 10 kg de máximo y 6 kg ya aceptados (en otra fecha): quedan 4 kg.
+            var viaje = CrearViaje(pesoMaxKg: 10m);
+            viaje.Asignaciones.Add(CrearAsignacion(Hoy.AddDays(3), CrearEnvio(50, estado: EstadoEnvio.Retirado, pesoKg: 6m)));
+            _viajes.Viajes.Add(viaje);
+            _envios.Envios.Add(CrearEnvio(1, pesoKg: 4m));
+            _envios.Envios.Add(CrearEnvio(2, pesoKg: 4.5m));
+
+            var resultado = await CrearServicio().ListarAsync(ConductorId, ViajeId);
+
+            var oportunidad = Assert.Single(resultado!.Oportunidades);
+            Assert.Equal(1, oportunidad.EnvioId);
+            Assert.Equal(4m, resultado.KgDisponibles);
+            Assert.Equal(2, resultado.PaquetesDisponibles);
+            Assert.Equal(4m, oportunidad.CapacidadRestanteKg);
+        }
+
+        [Fact]
+        public async Task ListarAsync_EnviosEntregadosYCanceladosLiberanLugar()
         {
             var viaje = CrearViaje(maxPaquetes: 1, pesoMaxKg: 5m);
             viaje.Asignaciones.Add(CrearAsignacion(Hoy.AddDays(-7), CrearEnvio(50, estado: EstadoEnvio.Entregado, pesoKg: 5m)));
@@ -179,19 +198,7 @@ namespace RuteaYa.Tests
 
             var oportunidad = Assert.Single(resultado!.Oportunidades);
             Assert.Equal(Hoy, oportunidad.FechaViaje);
-        }
-
-        [Fact]
-        public async Task ListarAsync_SinLugarEnNingunaSalidaHastaLaFechaLimite_NoLoOfrece()
-        {
-            var viaje = CrearViaje(maxPaquetes: 1);
-            viaje.Asignaciones.Add(CrearAsignacion(Hoy, CrearEnvio(50, estado: EstadoEnvio.Retirado)));
-            _viajes.Viajes.Add(viaje);
-            _envios.Envios.Add(CrearEnvio(1, fechaLimite: Hoy));
-
-            var resultado = await CrearServicio().ListarAsync(ConductorId, ViajeId);
-
-            Assert.Empty(resultado!.Oportunidades);
+            Assert.Equal(1, resultado.PaquetesDisponibles);
         }
 
         [Fact]
@@ -419,19 +426,69 @@ namespace RuteaYa.Tests
         }
 
         [Fact]
-        public async Task AceptarAsync_SinLugarEnElViaje_DevuelveConflictoYNoCambiaElEstado()
+        public async Task AceptarAsync_ViajeConTodosLosPaquetesAceptados_DevuelveConflictoYNoCambiaElEstado()
         {
             var viaje = CrearViaje(maxPaquetes: 1);
-            viaje.Asignaciones.Add(CrearAsignacion(Hoy, CrearEnvio(50, estado: EstadoEnvio.ConductorAsignado)));
+            viaje.Asignaciones.Add(CrearAsignacion(Hoy.AddDays(2), CrearEnvio(50, estado: EstadoEnvio.ConductorAsignado)));
             _viajes.Viajes.Add(viaje);
-            var envio = CrearEnvio(1, fechaLimite: Hoy);
+            var envio = CrearEnvio(1, fechaLimite: Hoy.AddDays(10));
             _envios.Envios.Add(envio);
 
             var resultado = await CrearServicio().AceptarAsync(ConductorId, ViajeId, 1);
 
             Assert.Equal(ResultadoOperacion.Conflicto, resultado.Resultado);
+            Assert.Contains("1 de 1 paquetes", resultado.Mensaje);
             Assert.Equal(EstadoEnvio.BuscandoConductor, envio.Estado);
             Assert.Empty(envio.Historial);
+        }
+
+        [Fact]
+        public async Task AceptarAsync_SuperaElPesoMaximoContandoLosYaAceptados_DevuelveConflicto()
+        {
+            var viaje = CrearViaje(pesoMaxKg: 10m);
+            viaje.Asignaciones.Add(CrearAsignacion(Hoy.AddDays(2), CrearEnvio(50, estado: EstadoEnvio.EnCamino, pesoKg: 7m)));
+            _viajes.Viajes.Add(viaje);
+            _envios.Envios.Add(CrearEnvio(1, pesoKg: 4m));
+
+            var resultado = await CrearServicio().AceptarAsync(ConductorId, ViajeId, 1);
+
+            Assert.Equal(ResultadoOperacion.Conflicto, resultado.Resultado);
+            Assert.Contains("11 kg", resultado.Mensaje);
+            Assert.Empty(_asignaciones.Agregadas);
+        }
+
+        [Fact]
+        public async Task AceptarAsync_UnoTrasOtro_NoPermitePasarseDeLaCantidadDePaquetes()
+        {
+            _viajes.Viajes.Add(CrearViaje(maxPaquetes: 2));
+            _envios.Envios.Add(CrearEnvio(1));
+            _envios.Envios.Add(CrearEnvio(2));
+            _envios.Envios.Add(CrearEnvio(3));
+            var servicio = CrearServicio();
+
+            Assert.Equal(ResultadoOperacion.Exito, (await servicio.AceptarAsync(ConductorId, ViajeId, 1)).Resultado);
+            Assert.Equal(ResultadoOperacion.Exito, (await servicio.AceptarAsync(ConductorId, ViajeId, 2)).Resultado);
+            var tercero = await servicio.AceptarAsync(ConductorId, ViajeId, 3);
+
+            Assert.Equal(ResultadoOperacion.Conflicto, tercero.Resultado);
+            Assert.Equal(2, _asignaciones.Agregadas.Count);
+        }
+
+        [Fact]
+        public async Task AceptarAsync_UnoTrasOtro_NoPermitePasarseDelPesoMaximo()
+        {
+            _viajes.Viajes.Add(CrearViaje(maxPaquetes: 5, pesoMaxKg: 10m));
+            _envios.Envios.Add(CrearEnvio(1, pesoKg: 6m));
+            _envios.Envios.Add(CrearEnvio(2, pesoKg: 4m));
+            _envios.Envios.Add(CrearEnvio(3, pesoKg: 0.5m));
+            var servicio = CrearServicio();
+
+            Assert.Equal(ResultadoOperacion.Exito, (await servicio.AceptarAsync(ConductorId, ViajeId, 1)).Resultado);
+            Assert.Equal(ResultadoOperacion.Exito, (await servicio.AceptarAsync(ConductorId, ViajeId, 2)).Resultado);
+            var tercero = await servicio.AceptarAsync(ConductorId, ViajeId, 3);
+
+            Assert.Equal(ResultadoOperacion.Conflicto, tercero.Resultado);
+            Assert.Equal(10m, _asignaciones.Agregadas.Sum(a => a.Envio.PesoKg));
         }
 
         [Fact]
@@ -589,6 +646,13 @@ namespace RuteaYa.Tests
 
         private class AsignacionRepositorioFalso : IAsignacionRepositorio
         {
+            private readonly ViajeRepositorioFalso _viajes;
+
+            public AsignacionRepositorioFalso(ViajeRepositorioFalso viajes)
+            {
+                _viajes = viajes;
+            }
+
             public List<Asignacion> Agregadas { get; } = new List<Asignacion>();
             public bool FallarPorIndiceUnico { get; set; }
 
@@ -613,6 +677,8 @@ namespace RuteaYa.Tests
                 {
                     asignacion.Id = Agregadas.Count + 1;
                     Agregadas.Add(asignacion);
+                    // Como la base: la próxima vez que se lea el viaje, la asignación ya está.
+                    _viajes.Viajes.Single(v => v.Id == asignacion.ViajeId).Asignaciones.Add(asignacion);
                 }
 
                 return Task.CompletedTask;

@@ -252,3 +252,28 @@ html {
     border: 2px solid #fff;
     box-shadow: 0 1px 4px rgba(0, 0, 0, .4);
 }
+
+/* Dashboard */
+.dashboard-kpi {
+    color: inherit;
+    text-decoration: none;
+    transition: transform 0.1s ease-in-out;
+}
+
+    .dashboard-kpi:hover {
+        transform: translateY(-2px);
+    }
+
+.dashboard-kpi-valor {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.dashboard-fecha {
+    flex: 0 0 4.5rem;
+}
+
+.min-w-0 {
+    min-width: 0;
+}
