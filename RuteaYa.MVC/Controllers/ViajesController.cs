@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using RuteaYa.DTOs;
 using RuteaYa.MVC.Models;
 using RuteaYa.MVC.Servicios.Interfaces;
+using System.Globalization;
+using RuteaYa.DTOs.Rutas;
 
 namespace RuteaYa.MVC.Controllers
 {
@@ -144,6 +146,24 @@ namespace RuteaYa.MVC.Controllers
             return Json(await _viajeServicio.BuscarDireccionesAsync(texto.Trim()));
         }
 
+        // Trazado de un recorrido (lo llama el mapa con fetch). "puntos" = "lat,lng;lat,lng;..." en orden: origen, paradas, destino.
+        public async Task<IActionResult> CalcularRuta(string? puntos)
+        {
+            var recorrido = LeerRecorrido(puntos);
+            if (recorrido == null)
+            {
+                return BadRequest();
+            }
+
+            var ruta = await _viajeServicio.CalcularRutaAsync(recorrido);
+            if (ruta == null)
+            {
+                return StatusCode(StatusCodes.Status503ServiceUnavailable);
+            }
+
+            return Json(ruta);
+        }
+
         // returnUrl permite volver a Mis viajes con el filtro aplicado o al detalle, según desde dónde se pidió.
         private async Task<IActionResult> AplicarCambioActivoAsync(int id, string? returnUrl,
             Func<Task<ResultadoCambioEstado>> accion, string mensajeExito)
@@ -173,6 +193,30 @@ namespace RuteaYa.MVC.Controllers
             }
 
             return RedirectToAction(nameof(Detalle), new { id });
+        }
+
+        private static List<CoordenadaDto>? LeerRecorrido(string? puntos)
+        {
+            if (string.IsNullOrWhiteSpace(puntos))
+            {
+                return null;
+            }
+
+            var recorrido = new List<CoordenadaDto>();
+            foreach (var par in puntos.Split(';', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var partes = par.Split(',');
+                if (partes.Length != 2
+                    || !decimal.TryParse(partes[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var lat)
+                    || !decimal.TryParse(partes[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var lng))
+                {
+                    return null;
+                }
+
+                recorrido.Add(new CoordenadaDto(lat, lng));
+            }
+
+            return recorrido.Count >= 2 && recorrido.Count <= 25 ? recorrido : null;
         }
 
         // Errores de validación de la API, para mostrarlos junto a cada campo.

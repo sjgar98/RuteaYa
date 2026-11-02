@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using RuteaYa.DTOs;
 using RuteaYa.MVC.Models;
 using RuteaYa.MVC.Servicios.Interfaces;
+using RuteaYa.DTOs.Rutas;
 
 namespace RuteaYa.MVC.Servicios
 {
@@ -82,6 +83,17 @@ namespace RuteaYa.MVC.Servicios
         {
             var url = $"api/viajes/direcciones?texto={Uri.EscapeDataString(texto)}";
             return await _http.GetFromJsonAsync<List<DireccionDto>>(url) ?? new List<DireccionDto>();
+        }
+
+        public async Task<RutaResultadoDto?> CalcularRutaAsync(List<CoordenadaDto> recorrido)
+        {
+            var respuesta = await _http.PostAsJsonAsync("api/rutas/calcular", new ConsultaRutaDto { Recorrido = recorrido });
+            if (!respuesta.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            return await respuesta.Content.ReadFromJsonAsync<RutaResultadoDto>();
         }
 
         private async Task<ResultadoCambioEstado> CambiarActivoAsync(string url)
