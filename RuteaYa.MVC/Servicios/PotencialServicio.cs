@@ -16,12 +16,8 @@ namespace RuteaYa.MVC.Servicios
         public async Task<PotencialDto?> ObtenerPotencialAsync(string? mes, string? criterio)
         {
             var queryParams = new List<string>();
-
-            if (!string.IsNullOrEmpty(mes))
-                queryParams.Add($"mes={Uri.EscapeDataString(mes)}");
-
-            if (!string.IsNullOrEmpty(criterio))
-                queryParams.Add($"criterio={Uri.EscapeDataString(criterio)}");
+            if (!string.IsNullOrEmpty(mes)) queryParams.Add($"mes={Uri.EscapeDataString(mes)}");
+            if (!string.IsNullOrEmpty(criterio)) queryParams.Add($"criterio={Uri.EscapeDataString(criterio)}");
 
             var url = "api/potencial";
             if (queryParams.Any())

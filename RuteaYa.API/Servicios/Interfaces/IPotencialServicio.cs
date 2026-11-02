@@ -4,6 +4,6 @@ namespace RuteaYa.MVC.Servicios.Interfaces
 {
     public interface IPotencialServicio
     {
-        Task<PotencialDto?> ObtenerPotencialAsync(string? mes, string? criterio);
+        Task<PotencialDto> CalcularPotencialMensualAsync(int usuarioId, string? mes, string? criterio);
     }
 }

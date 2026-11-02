@@ -8,19 +8,17 @@ using Microsoft.OpenApi;
 using Microsoft.Extensions.Options;
 using RuteaYa.API.Servicios;
 using RuteaYa.API.Servicios.Interfaces;
-using RuteaYa.API.Servicios.Simulados;
 using RuteaYa.Entidades;
 using RuteaYa.Repositorios;
 using RuteaYa.Repositorios.Interfaces;
 using RuteaYa.API.Servicios.Rutas;
 using Microsoft.Extensions.Caching.Memory;
+using RuteaYa.MVC.Servicios.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
 using var db = new RuteaYaDbContext();
-db.Database.Migrate();
-
-//Esto lo agrege xq no queria tocar cosas de las migraciones en la base de datos)? le tengo respeto 
+db.Database.Migrate(); // Esto lo agregué porque no quería tocar cosas de las migraciones en la base de datos (¡le tengo respeto!)
 await InicializadorDatos.InicializarAsync(db);
 
 // Add services to the container.
@@ -53,6 +51,7 @@ builder.Services.AddScoped<IUsuarioServicio, UsuarioServicio>();
 builder.Services.AddScoped<ITokenServicio, TokenServicio>();
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 builder.Services.AddMemoryCache();
+
 builder.Services.Configure<RutasOpciones>(builder.Configuration.GetSection("Rutas"));
 builder.Services.AddScoped<RutaServicioMock>();
 builder.Services.AddHttpClient<RutaServicioGoogle>(cliente => cliente.Timeout = TimeSpan.FromSeconds(10));
@@ -75,11 +74,15 @@ builder.Services.AddScoped<IRutaServicio>(sp =>
     return new RutaServicioConRespaldo(
         google, mock, sp.GetRequiredService<IMemoryCache>(), sp.GetRequiredService<ILogger<RutaServicioConRespaldo>>());
 });
+
 builder.Services.AddScoped<IHistorialServicio, HistorialServicio>();
 builder.Services.AddScoped<IEnvioServicio, EnvioServicio>();
 builder.Services.AddScoped<ITransporteServicio, TransporteServicio>();
 builder.Services.AddScoped<IOportunidadesServicio, OportunidadesServicio>();
 builder.Services.AddScoped<IOptimizadorServicio, OptimizadorServicio>();
+
+// Registro del servicio para la Pantalla 14 (Potencial Mensual)
+builder.Services.AddScoped<IPotencialServicio, PotencialServicio>();
 
 builder.Services.AddDbContext<RuteaYaDbContext>();
 
@@ -104,8 +107,6 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
-//app.Logger.LogInformation("Servicio de rutas: {Proveedor}",
-//    app.Services.GetRequiredService<IOptions<RutasOpciones>>().Value.UsarGoogle() ? "Google" : "Mock");
 var opcionesRutas = app.Services.GetRequiredService<IOptions<RutasOpciones>>().Value;
 app.Logger.LogInformation("Servicio de rutas: {Proveedor}",
     !opcionesRutas.UsarGoogle() ? "Mock"

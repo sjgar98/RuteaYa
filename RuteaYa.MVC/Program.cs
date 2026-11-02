@@ -4,7 +4,6 @@ using RuteaYa.MVC.Filtros;
 using RuteaYa.MVC.Servicios;
 using RuteaYa.MVC.Servicios.Interfaces;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -40,6 +39,7 @@ builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
 });
+
 builder.Services.AddHttpClient<IHistorialServicio, HistorialServicio>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["ApiUrl"]!);
@@ -52,6 +52,10 @@ builder.Services.AddHttpClient<IOportunidadesServicio, OportunidadesServicio>(c 
     .AddHttpMessageHandler<TokenHandler>();
 
 builder.Services.AddHttpClient<IOptimizadorServicio, OptimizadorServicio>(c => c.BaseAddress = apiUrl)
+    .AddHttpMessageHandler<TokenHandler>();
+
+// Registro del servicio HTTP para la Pantalla 14 (Potencial Mensual)
+builder.Services.AddHttpClient<IPotencialServicio, PotencialServicio>(c => c.BaseAddress = apiUrl)
     .AddHttpMessageHandler<TokenHandler>();
 
 var app = builder.Build();

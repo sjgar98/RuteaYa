@@ -14,7 +14,7 @@ namespace RuteaYa.API.Servicios
                 return;
             }
 
-            int usuarioId = 1; // Usuario principal por defecto (prueba@ruteaya.com)
+            int usuarioId = 3001; // Usuario principal por defecto (prueba@ruteaya.com)
 
             // ==========================================
             // 1. DATOS PARA LA PANTALLA 13 (HISTORIAL)
@@ -48,40 +48,52 @@ namespace RuteaYa.API.Servicios
 
 
             // ==========================================
-            // 2. DATOS PARA LA PANTALLA 14 (POTENCIAL MENSUAL)
+            // 2. DATOS MASIVOS PARA LA PANTALLA 14 (POTENCIAL MENSUAL)
             // ==========================================
 
-            // Creamos un usuario externo para que posea los envíos disponibles
             var usuarioExterno = new Usuario
             {
                 Email = "externo@ruteaya.com"
             };
             context.Usuarios.Add(usuarioExterno);
-            await context.SaveChangesAsync(); // Al guardarlo, SQL Server le asigna su ID automáticamente
-
-            // Viajes activos recurrentes del usuario principal
-            var viajeRec1 = new Viaje { UsuarioId = usuarioId, OrigenDir = "Centro", DestinoDir = "Nuñez", HoraSalida = new TimeOnly(7, 30), HoraLlegada = new TimeOnly(8, 15), MaxPaquetes = 4, PesoMaxKg = 15m, DesvioMaxKm = 4m, DistanciaKm = 12.0m, DuracionMin = 45, Activo = true };
-            var viajeRec2 = new Viaje { UsuarioId = usuarioId, OrigenDir = "Flores", DestinoDir = "Puerto Madero", HoraSalida = new TimeOnly(13, 0), HoraLlegada = new TimeOnly(13, 50), MaxPaquetes = 3, PesoMaxKg = 10m, DesvioMaxKm = 3m, DistanciaKm = 10.5m, DuracionMin = 50, Activo = true };
-
-            context.Viajes.AddRange(viajeRec1, viajeRec2);
             await context.SaveChangesAsync();
 
-            // Días recurrentes para los viajes activos (ej. Lunes, Miércoles, Viernes)
+            // Viajes recurrentes activos del usuario
+            var viajeRec1 = new Viaje { UsuarioId = usuarioId, OrigenDir = "Centro", DestinoDir = "Nuñez", HoraSalida = new TimeOnly(7, 30), HoraLlegada = new TimeOnly(8, 15), MaxPaquetes = 4, PesoMaxKg = 15m, DesvioMaxKm = 4m, DistanciaKm = 12.0m, DuracionMin = 45, Activo = true };
+            var viajeRec2 = new Viaje { UsuarioId = usuarioId, OrigenDir = "Flores", DestinoDir = "Puerto Madero", HoraSalida = new TimeOnly(13, 0), HoraLlegada = new TimeOnly(13, 50), MaxPaquetes = 3, PesoMaxKg = 10m, DesvioMaxKm = 3m, DistanciaKm = 10.5m, DuracionMin = 50, Activo = true };
+            var viajeRec3 = new Viaje { UsuarioId = usuarioId, OrigenDir = "Belgrano", DestinoDir = "Quilmes", HoraSalida = new TimeOnly(17, 0), HoraLlegada = new TimeOnly(18, 10), MaxPaquetes = 5, PesoMaxKg = 20m, DesvioMaxKm = 6m, DistanciaKm = 25.0m, DuracionMin = 70, Activo = true };
+            var viajeRec4 = new Viaje { UsuarioId = usuarioId, OrigenDir = "Caballito", DestinoDir = "San Isidro", HoraSalida = new TimeOnly(8, 30), HoraLlegada = new TimeOnly(9, 20), MaxPaquetes = 4, PesoMaxKg = 12m, DesvioMaxKm = 4m, DistanciaKm = 19.0m, DuracionMin = 50, Activo = true };
+
+            context.Viajes.AddRange(viajeRec1, viajeRec2, viajeRec3, viajeRec4);
+            await context.SaveChangesAsync();
+
+            // Días recurrentes cubriendo toda la semana
             context.ViajeDias.AddRange(
                 new ViajeDia { ViajeId = viajeRec1.Id, DiaSemana = DiaSemana.Lunes },
                 new ViajeDia { ViajeId = viajeRec1.Id, DiaSemana = DiaSemana.Miercoles },
                 new ViajeDia { ViajeId = viajeRec1.Id, DiaSemana = DiaSemana.Viernes },
                 new ViajeDia { ViajeId = viajeRec2.Id, DiaSemana = DiaSemana.Martes },
-                new ViajeDia { ViajeId = viajeRec2.Id, DiaSemana = DiaSemana.Jueves }
+                new ViajeDia { ViajeId = viajeRec2.Id, DiaSemana = DiaSemana.Jueves },
+                new ViajeDia { ViajeId = viajeRec3.Id, DiaSemana = DiaSemana.Lunes },
+                new ViajeDia { ViajeId = viajeRec3.Id, DiaSemana = DiaSemana.Miercoles },
+                new ViajeDia { ViajeId = viajeRec3.Id, DiaSemana = DiaSemana.Viernes },
+                new ViajeDia { ViajeId = viajeRec4.Id, DiaSemana = DiaSemana.Martes },
+                new ViajeDia { ViajeId = viajeRec4.Id, DiaSemana = DiaSemana.Jueves },
+                new ViajeDia { ViajeId = viajeRec4.Id, DiaSemana = DiaSemana.Sabado }
             );
 
-            // Envíos disponibles asociados al usuario externo creado dinámicamente
+            // Gran cantidad de envíos disponibles distribuidos con fechas límite largas (hasta fin de año)
             context.Envios.AddRange(
-                new Envio { UsuarioId = usuarioExterno.Id, OrigenDir = "Obelisco", DestinoDir = "Nuñez", FechaLimite = DateOnly.FromDateTime(DateTime.Today.AddDays(15)), PesoKg = 2.5m, Tamano = TamanoEnvio.Pequeno, Descripcion = "Documentación urgente", Monto = 6500m, Estado = EstadoEnvio.BuscandoConductor, CreadoEn = DateTime.Now },
-                new Envio { UsuarioId = usuarioExterno.Id, OrigenDir = "Retiro", DestinoDir = "Belgrano", FechaLimite = DateOnly.FromDateTime(DateTime.Today.AddDays(15)), PesoKg = 4.0m, Tamano = TamanoEnvio.Mediano, Descripcion = "Ropa", Monto = 8000m, Estado = EstadoEnvio.BuscandoConductor, CreadoEn = DateTime.Now },
-                new Envio { UsuarioId = usuarioExterno.Id, OrigenDir = "San Telmo", DestinoDir = "Palermo", FechaLimite = DateOnly.FromDateTime(DateTime.Today.AddDays(15)), PesoKg = 1.5m, Tamano = TamanoEnvio.Pequeno, Descripcion = "Libros", Monto = 5000m, Estado = EstadoEnvio.BuscandoConductor, CreadoEn = DateTime.Now },
-                new Envio { UsuarioId = usuarioExterno.Id, OrigenDir = "Flores", DestinoDir = "Puerto Madero", FechaLimite = DateOnly.FromDateTime(DateTime.Today.AddDays(15)), PesoKg = 5.0m, Tamano = TamanoEnvio.Grande, Descripcion = "Caja Electrónica", Monto = 12000m, Estado = EstadoEnvio.BuscandoConductor, CreadoEn = DateTime.Now },
-                new Envio { UsuarioId = usuarioExterno.Id, OrigenDir = "Caballito", DestinoDir = "Microcentro", FechaLimite = DateOnly.FromDateTime(DateTime.Today.AddDays(15)), PesoKg = 3.0m, Tamano = TamanoEnvio.Mediano, Descripcion = "Comida envasada", Monto = 7500m, Estado = EstadoEnvio.BuscandoConductor, CreadoEn = DateTime.Now }
+                new Envio { UsuarioId = usuarioExterno.Id, OrigenDir = "Obelisco", DestinoDir = "Nuñez", FechaLimite = DateOnly.FromDateTime(DateTime.Today.AddDays(40)), PesoKg = 2.5m, Tamano = TamanoEnvio.Pequeno, Descripcion = "Documentación urgente", Monto = 6500m, Estado = EstadoEnvio.BuscandoConductor, CreadoEn = DateTime.Now },
+                new Envio { UsuarioId = usuarioExterno.Id, OrigenDir = "Retiro", DestinoDir = "Belgrano", FechaLimite = DateOnly.FromDateTime(DateTime.Today.AddDays(40)), PesoKg = 4.0m, Tamano = TamanoEnvio.Mediano, Descripcion = "Ropa y accesorios", Monto = 8000m, Estado = EstadoEnvio.BuscandoConductor, CreadoEn = DateTime.Now },
+                new Envio { UsuarioId = usuarioExterno.Id, OrigenDir = "San Telmo", DestinoDir = "Palermo", FechaLimite = DateOnly.FromDateTime(DateTime.Today.AddDays(40)), PesoKg = 1.5m, Tamano = TamanoEnvio.Pequeno, Descripcion = "Libros técnicos", Monto = 5000m, Estado = EstadoEnvio.BuscandoConductor, CreadoEn = DateTime.Now },
+                new Envio { UsuarioId = usuarioExterno.Id, OrigenDir = "Flores", DestinoDir = "Puerto Madero", FechaLimite = DateOnly.FromDateTime(DateTime.Today.AddDays(40)), PesoKg = 5.0m, Tamano = TamanoEnvio.Grande, Descripcion = "Caja Electrónica", Monto = 12000m, Estado = EstadoEnvio.BuscandoConductor, CreadoEn = DateTime.Now },
+                new Envio { UsuarioId = usuarioExterno.Id, OrigenDir = "Caballito", DestinoDir = "Microcentro", FechaLimite = DateOnly.FromDateTime(DateTime.Today.AddDays(40)), PesoKg = 3.0m, Tamano = TamanoEnvio.Mediano, Descripcion = "Comida envasada", Monto = 7500m, Estado = EstadoEnvio.BuscandoConductor, CreadoEn = DateTime.Now },
+                new Envio { UsuarioId = usuarioExterno.Id, OrigenDir = "Constitución", DestinoDir = "Quilmes", FechaLimite = DateOnly.FromDateTime(DateTime.Today.AddDays(40)), PesoKg = 6.0m, Tamano = TamanoEnvio.Grande, Descripcion = "Repuestos mecánicos", Monto = 14000m, Estado = EstadoEnvio.BuscandoConductor, CreadoEn = DateTime.Now },
+                new Envio { UsuarioId = usuarioExterno.Id, OrigenDir = "Palermo", DestinoDir = "San Isidro", FechaLimite = DateOnly.FromDateTime(DateTime.Today.AddDays(40)), PesoKg = 2.0m, Tamano = TamanoEnvio.Pequeno, Descripcion = "Cosméticos", Monto = 6000m, Estado = EstadoEnvio.BuscandoConductor, CreadoEn = DateTime.Now },
+                new Envio { UsuarioId = usuarioExterno.Id, OrigenDir = "Belgrano", DestinoDir = "Nuñez", FechaLimite = DateOnly.FromDateTime(DateTime.Today.AddDays(40)), PesoKg = 1.0m, Tamano = TamanoEnvio.Pequeno, Descripcion = "Sobres de papel", Monto = 3500m, Estado = EstadoEnvio.BuscandoConductor, CreadoEn = DateTime.Now },
+                new Envio { UsuarioId = usuarioExterno.Id, OrigenDir = "Centro", DestinoDir = "Puerto Madero", FechaLimite = DateOnly.FromDateTime(DateTime.Today.AddDays(40)), PesoKg = 3.5m, Tamano = TamanoEnvio.Mediano, Descripcion = "Hardware PC", Monto = 9500m, Estado = EstadoEnvio.BuscandoConductor, CreadoEn = DateTime.Now },
+                new Envio { UsuarioId = usuarioExterno.Id, OrigenDir = "Flores", DestinoDir = "San Isidro", FechaLimite = DateOnly.FromDateTime(DateTime.Today.AddDays(40)), PesoKg = 4.5m, Tamano = TamanoEnvio.Mediano, Descripcion = "Herramientas", Monto = 11000m, Estado = EstadoEnvio.BuscandoConductor, CreadoEn = DateTime.Now }
             );
 
             await context.SaveChangesAsync();

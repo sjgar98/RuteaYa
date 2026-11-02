@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RuteaYa.API.Extensiones;
-using RuteaYa.API.Servicios.Simulados;
+using RuteaYa.API.Servicios.Interfaces;
 using RuteaYa.DTOs;
+using RuteaYa.MVC.Servicios.Interfaces;
 
 namespace RuteaYa.API.Controllers
 {
