@@ -147,7 +147,7 @@ Repositorios existentes (métodos ya disponibles, muchos aún sin uso):
 - `IEnvioRepositorio`: `ListarPorUsuarioAsync(usuarioId, estado?)`, `ListarDisponiblesAsync(desde, usuarioIdExcluido)` (BuscandoConductor, no vencidos, de otros usuarios), `ListarPorIdsAsync`, `ObtenerPorIdAsync` (con Asignacion+Viaje e Historial), `AgregarAsync`, `GuardarCambiosAsync`.
 - `IAsignacionRepositorio`: `ListarPorConductorAsync` (filtra por `Viaje.UsuarioId`, con `Envio` y `Viaje` incluidos, `AsNoTracking`), `ObtenerPorIdAsync` (con tracking, para cambiar estado), `AgregarAsync(List<Asignacion>)` (una o varias en un solo `SaveChanges`), `GuardarCambiosAsync`.
 
-Todos registrados como `Scoped` en `RuteaYa.API/Program.cs`. Servicios de la API: `IViajeServicio`, `IUsuarioServicio`, `ITokenServicio`, `IRutaServicio` (`RutaServicioGoogle` o `RutaServicioMock`, según `Rutas:Proveedor`; Google va envuelto en `RutaServicioConRespaldo` si `Rutas:RespaldoAlMock` es `true`), `IHistorialServicio`, `IEnvioServicio`, `ITransporteServicio`, `IOportunidadesServicio`.
+Todos registrados como `Scoped` en `RuteaYa.API/Program.cs`. Servicios de la API: `IViajeServicio`, `IUsuarioServicio`, `ITokenServicio`, `IRutaServicio` (`RutaServicioGoogle`, `RutaServicioOsrm` o `RutaServicioMock`, según `Rutas:Proveedor`; el proveedor real va envuelto en `RutaServicioConRespaldo` si `Rutas:RespaldoAlMock` es `true`), `IDireccionServicio` (`DireccionServicioPhoton`, con `DireccionServicioFijo` de respaldo), `IHistorialServicio`, `IEnvioServicio`, `ITransporteServicio`, `IOportunidadesServicio`.
 
 ### 4.1 Máquina de estados de envíos
 `RuteaYa.API/Servicios/EnvioEstadoMaquina.cs` es la **única fuente de verdad** para las transiciones
@@ -195,22 +195,22 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
 | 1 | Login / Registro / Logout | ✅ `POST api/usuarios/registro` (201 / 400 / 409), `POST api/usuarios/login` (200 con JWT / 401) | ✅ `CuentaController` (Login, Registro, Logout) con `_LayoutCuenta`, cookie con claim `"token"` | ✅ (ver 6.1) |
 | 2 | Dashboard | ✅ `GET api/dashboard` → `DashboardDto` (`DashboardServicio`: compone `IViajeServicio`, `IEnvioServicio`, `IOportunidadesServicio` e `IOptimizadorServicio`, sin repositorios) | ✅ `HomeController.Index` + `Views/Home/Index` (saludo, 4 contadores que llevan a su pantalla, próximos viajes y envíos pendientes con 5 ítems cada uno, accesos a Nuevo envío / Nuevo viaje) | 🟡 Próximas salidas = viajes activos en los próximos 7 días (hoy solo si no pasó la hora). Envíos pendientes = propios en BuscandoConductor/ConductorAsignado/Retirado/EnCamino. Oportunidades = envíos distintos compatibles con algún viaje activo. Potencial = combinación óptima ("ganancia") de cada viaje activo, solo envíos con `FechaViaje` en el mes actual y sin repetir envíos entre viajes (`TODO Potencial`: usar el servicio de la Pantalla 14 cuando exista) |
 | 3 | Mis viajes | ✅ `GET api/viajes?activo=` | ✅ `Viajes/Index` (filtros Todos/Activos/Inactivos, toast) | 🟡 Ver detalle ✅; Activar/Desactivar ✅ (Desactivar deshabilitado con tooltip si `ViajeDto.TieneEnviosPendientes`; vuelve a la lista con el filtro vía `returnUrl`); botón Oportunidades enlazado a `OportunidadesController.Index` |
-| 4 | Nuevo viaje | ✅ `POST api/viajes`, ✅ `GET api/viajes/direcciones?texto=` (lista fija) | ✅ `Viajes/Nuevo` + `_FormularioViaje` + `formulario-viaje.js` (paradas: agregar/quitar/reordenar) | 🟡 Distancia/duración calculadas con `IRutaServicio` (Google si hay key, si no mock; ver 6.2), direcciones de lista fija. Vista previa de la ruta con Google Maps (partial `_MapaRuta` + `mapa-viaje.js`, botón Actualizar ruta) |
-| 5 | Detalle / Editar / Activar / Desactivar viaje | ✅ `GET api/viajes/{id}` (`ViajeDetalleDto`: coordenadas, paradas, paquetes asignados; `TieneEnviosPendientes` vive en `ViajeDto`, también en el listado; 404 si no es propio) · ✅ `PUT api/viajes/{id}` (body `CrearViajeDto`; 204 / 400 / 404 / **409 si tiene envíos ConductorAsignado/Retirado/EnCamino**; reemplaza paradas, días por diferencia) · ✅ `POST api/viajes/{id}/desactivar` (204 / 404 / **409 con envíos pendientes**) y `POST api/viajes/{id}/activar` (204 / 404), ambos con `ViajeServicio.CambiarActivoAsync` | ✅ `Viajes/Detalle` (Editar deshabilitado con tooltip si hay envíos pendientes) · ✅ `Viajes/Editar` (mismo form que Nuevo, prepoblado, con vista previa de ruta; GET con pendientes redirige a Detalle) · ✅ `Viajes/Desactivar` y `Viajes/Activar [POST]` (409 → Detalle con alerta `ViewData["Error"]`; Desactivar deshabilitado con tooltip si hay envíos pendientes) | 🟡 Detalle y Editar hechos; Editar y Detalle con mapa de la ruta (Google Maps, partial `_MapaRuta`, ver 6.2); paquetes asignados **mock** (`PaquetesDePrueba()`, `TODO Paquetes asignados` — ahora que Envíos/Asignaciones son reales, falta reemplazar el mock por `viaje.Asignaciones`); Activar/Desactivar ✅ |
+| 4 | Nuevo viaje | ✅ `POST api/viajes`, ✅ `GET api/viajes/direcciones?texto=` (Photon, con respaldo a lista fija; ver 6.2) | ✅ `Viajes/Nuevo` + `_FormularioViaje` + `formulario-viaje.js` (paradas: agregar/quitar/reordenar) | ✅ Distancia/duración con IRutaServicio(Google si hay key, si no OSRM; mock de respaldo; ver 6.2), direcciones con Photon y vista previa de la ruta con Leaflet/OpenStreetMap (partial_MapaRuta+mapa-viaje.js, botón Actualizar ruta) |
+| 5 | Detalle / Editar / Activar / Desactivar viaje | ✅ `GET api/viajes/{id}` (`ViajeDetalleDto`: coordenadas, paradas, paquetes asignados; `TieneEnviosPendientes` vive en `ViajeDto`, también en el listado; 404 si no es propio) · ✅ `PUT api/viajes/{id}` (body `CrearViajeDto`; 204 / 400 / 404 / **409 si tiene envíos ConductorAsignado/Retirado/EnCamino**; reemplaza paradas, días por diferencia) · ✅ `POST api/viajes/{id}/desactivar` (204 / 404 / **409 con envíos pendientes**) y `POST api/viajes/{id}/activar` (204 / 404), ambos con `ViajeServicio.CambiarActivoAsync` | ✅ `Viajes/Detalle` (Editar deshabilitado con tooltip si hay envíos pendientes) · ✅ `Viajes/Editar` (mismo form que Nuevo, prepoblado, con vista previa de ruta; GET con pendientes redirige a Detalle) · ✅ `Viajes/Desactivar` y `Viajes/Activar [POST]` (409 → Detalle con alerta `ViewData["Error"]`; Desactivar deshabilitado con tooltip si hay envíos pendientes) | 🟡 Detalle y Editar hechos; Editar y Detalle con mapa de la ruta (Leaflet + OpenStreetMap, partial _MapaRuta, ver 6.2); paquetes asignados **mock** (`PaquetesDePrueba()`, `TODO Paquetes asignados` — ahora que Envíos/Asignaciones son reales, falta reemplazar el mock por `viaje.Asignaciones`); Activar/Desactivar ✅ |
 | — | Paradas dentro de un viaje | 🟡 vía `PUT api/viajes/{id}` (lista completa en orden) · ❌ endpoints propios `api/viajes/{id}/paradas` | se editan en el form del viaje | 🟡 |
 | 6 | Nuevo envío | ✅ `POST api/envios` | ✅ `Envios/Nuevo` + form + `formulario-envio.js` (autocompletado origen/destino reusando `Viajes/BuscarDirecciones`, tamaño como pills) | ✅ |
 | 7 | Mis envíos (+ detalle, cancelar) | ✅ `GET api/envios?estado=`, ✅ `GET api/envios/{id}` (con viaje asociado e historial), ✅ `POST api/envios/{id}/cancelar` (204 / 404 / 409) | ✅ `Envios/Index` (filtros por estado, `PuedeCancelar` calculado), `Envios/Detalle` (viaje asociado, historial de estados con hora local) | ✅ |
 | 8 | Oportunidades | ✅ `GET api/oportunidades/{viajeId}?ordenarPor=` (`ganancia`, `desvio` o `compatibilidad`) → `OportunidadesViajeDto` (datos del viaje + lista); 404 si el viaje no es propio | ✅ `OportunidadesController.Index(viajeId?, ordenarPor)` (sin viajeId toma el primer viaje activo; selector de viaje + `oportunidades.js`, orden en pills, Aceptar desde la lista) | ✅ Motor de compatibilidad en `OportunidadesServicio.EvaluarAsync` (ver 4.2). Empates: ganancia desc → desvío asc |
-| 9 | Detalle de oportunidad | ✅ `GET api/oportunidades/{viajeId}/detalle?envioId=` (404 si el viaje no es propio o el envío no existe, es propio o ya no busca conductor) | ✅ `OportunidadesController.Detalle` + vista con tarjeta "Pago"; si la API da 404 vuelve al listado con "La oportunidad ya no está disponible" | ✅ Ruta habitual vs. con el envío, desvío, tiempos, pago, ganancia por km, capacidad restante (después de aceptar) y fecha del viaje. Si una restricción dejó de cumplirse: `PuedeAceptar = false` + `Motivo`, botón deshabilitado |
+| 9 | Detalle de oportunidad | ✅ `GET api/oportunidades/{viajeId}/detalle?envioId=` (404 si el viaje no es propio o el envío no existe, es propio o ya no busca conductor) | ✅ `OportunidadesController.Detalle` + vista con tarjeta "Pago"; si la API da 404 vuelve al listado con "La oportunidad ya no está disponible" | ✅ Ruta habitual vs. con el envío, desvío, tiempos, pago, ganancia por km, capacidad restante (después de aceptar) y fecha del viaje. Si una restricción dejó de cumplirse: `PuedeAceptar = false` + `Motivo`, botón deshabilitado,Mapa comparativo de las dos rutas (_MapaComparacion, ver 6.2) |
 | 10 | Optimizador | ✅ `GET api/optimizacion/{viajeId}?criterio=` | ✅ `OptimizadorController.Index` + `Views/Optimizador/Index.cshtml` (criterios ganancia/desvio/equilibrio, combinación óptima con totales, lista de envíos, otras combinaciones válidas, envíos descartados con motivo, confirmación de reserva) | ✅ Algoritmo de backtracking con poda multidimensional (paquetes, peso, desvío y cota superior). Criterios ganancia/desvío/equilibrio. Desempate por menor desvío. Reúsa `EvaluarCompatibilidadAsync` de `OportunidadesServicio` |
 | 11 | Confirmación / asignación | 🟡 `POST api/oportunidades/{viajeId}/aceptar` (body `AceptarOportunidadDto`) → 201 `AsignacionDto` / 404 / 409 `ProblemDetails` con el motivo en `title` | 🟡 `OportunidadesController.Aceptar [POST]` desde la lista o el Detalle (409 → alerta con el motivo; éxito → toast) | 🟡 Aceptar un envío revalida todo, crea la `Asignacion` (con `FechaViaje`) y pasa el envío a `ConductorAsignado` en un solo `SaveChanges`; `DbUpdateException` (índice único) → 409. Falta: `api/asignaciones` multi-envío (para el Optimizador) y la pantalla de Confirmación |
 | 12 | Mis transportes | ✅ `GET api/transportes`, ✅ `POST api/transportes/{asignacionId}/retirado`, `/en-camino`, `/entregado` (204 / 404 / 409) | ✅ `TransportesController.Index` (acciones condicionadas por `PuedeMarcarRetirado/EnCamino/Entregado`) | ✅ |
 | 13 | Historial | ✅ `GET api/historial?desde=&hasta=&orden=&estado=` (viajes con envios entregados, orden por fecha/monto) | 🟡 `HistorialController.Index` + `Views/Historial/Index` (KPIs, filtros por fecha/orden, link a detalle de viaje) | 🟡 Falta cubrir estados/tipos adicionales y tests unitarios del servicio |
 | 14 | Potencial mensual (req. para 10) | ❌ `GET api/potencial?mes=yyyy-MM&criterio=` (`ganancia`, `desvio` o `equilibrio`) | ❌ | ❌ |
-| — | Servicio de rutas/mapas | ✅ `IRutaServicio` con coordenadas (`CalcularRutaAsync`, `CompararConEnvioAsync`) + `RutaServicioGoogle` (Routes API, caché) + `RutaServicioMock`, elegidas por `Rutas:Proveedor`. `RutasController` conserva endpoints de texto (legado) . RutaServicioConRespaldo (decorador): si Google falla responde con el mock y loguea un warning | — | 🟡 Google funcionando y mock sin key o como respaldo si Google falla; lo usan `ViajeServicio` (distancia/duración) y `OportunidadesServicio` (desvío). Falta: borrar los métodos de texto (usan Geocoding, que exige facturación), test de `RutasOpciones.UsarGoogle()` y direcciones reales (hoy lista fija) |
+| — | Servicio de rutas/mapas | ✅ IRutaServicio con coordenadas (CalcularRutaAsync, CompararConEnvioAsync) + RutaServicioGoogle(opcional, con key),RutaServicioOsrm(por defecto, sin key) yRutaServicioMock, elegidas por Rutas:Proveedor; RutaServicioConRespaldo(decorador) cae al mock si el proveedor falla. ✅POST api/rutas/calcular (RutasController). ✅ IDireccionServicio: Photon con lista fija de respaldo | ✅ _MapaRuta, _MapaComparaciony_LeafletRecursos+mapa-viaje.jsymapa-comparacion.js(Leaflet + OpenStreetMap);Viajes/CalcularRuta`` | ✅ Todo funciona sin ninguna key. Lo usan ViajeServicio(distancia/duración) yOportunidadesServicio(desvío). Falta: borrarGeocodificarDireccionAsyncyBuscarDireccionesAsyncdeIRutaServicio (sin uso) |
 | — | Máquina de estados de envío | ✅ `EnvioEstadoMaquina` (estática, `API/Servicios/`): única fuente de verdad de las transiciones de `EstadoEnvio` (ver 4.1) | — | ✅ Usada por Cancelar (Pantalla 7), aceptar oportunidad (`→ ConductorAsignado`, Pantallas 8-9) y retirado/en camino/entregado (Pantalla 12) |
 | — | Layout con sidebar | — | ✅ `_Layout.cshtml` + `_MenuLateral.cshtml` (secciones → `/<Controller>`, activa según el controller actual) + `_MenuUsuario.cshtml` (nombre, email, Cerrar sesión). En celulares el menú es un offcanvas | ✅ Controllers esperados: `Envios` ✅, `Oportunidades` ✅, `Optimizador` ✅, `Transportes` ✅, `Historial` ✅, `Potencial` ❌ (acción `Index`); si se usa otro nombre, cambiarlo en `_MenuLateral` |
-| — | Tests unitarios por endpoint | — | — | 🟡 `DashboardServicioTests` (próximas salidas por día y hora, envíos pendientes, oportunidades sin duplicar, potencial sin repetir envíos y solo del mes), `UsuarioServicio`, `ViajeServicio.ObtenerDetalleAsync`, `CrearAsync` (cálculo de ruta) y `ActualizarAsync`; `EnvioServicioTests` (listar, detalle, cancelar con todas las transiciones de `EnvioEstadoMaquina`, crear) y `TransporteServicioTests` (listar, marcar retirado/en camino/entregado con cobertura de "sin saltear estados") completos. `OportunidadesServicioTests` (propietario, viaje inactivo, envíos propios/no disponibles, fecha/día, límite de paquetes y peso del viaje contando los ya aceptados (también aceptando uno tras otro), desvío, etiquetas, orden y desempate, falla de ruta, detalle con y sin restricciones, aceptar → `ConductorAsignado` + historial, conflictos e índice único); `OptimizadorServicioTests` (ejemplo de la sección 12, empates resueltos por menor desvío, criterios ganancia/desvío/equilibrio, restricciones de capacidad, peso, desvío, envíos propios y casos límite, lugar libre con envíos ya aceptados); rutas: `RutasTests` (inserción del recorrido, `PolylineCodec`, mock y `GeoUtil`), `RutaServicioGoogleTests` (parseo, caché, errores, comparación y geocoding con `HttpMessageHandler` falso) y `RutaServicioConRespaldoTests` (respaldo al mock y pausa ante fallas de red)|
+| — | Tests unitarios por endpoint | — | — | 🟡 `DashboardServicioTests` (próximas salidas por día y hora, envíos pendientes, oportunidades sin duplicar, potencial sin repetir envíos y solo del mes), `UsuarioServicio`, `ViajeServicio.ObtenerDetalleAsync`, `CrearAsync` (cálculo de ruta) y `ActualizarAsync`; `EnvioServicioTests` (listar, detalle, cancelar con todas las transiciones de `EnvioEstadoMaquina`, crear) y `TransporteServicioTests` (listar, marcar retirado/en camino/entregado con cobertura de "sin saltear estados") completos. `OportunidadesServicioTests` (propietario, viaje inactivo, envíos propios/no disponibles, fecha/día, límite de paquetes y peso del viaje contando los ya aceptados (también aceptando uno tras otro), desvío, etiquetas, orden y desempate, falla de ruta, detalle con y sin restricciones, aceptar → `ConductorAsignado` + historial, conflictos e índice único); `OptimizadorServicioTests` (ejemplo de la sección 12, empates resueltos por menor desvío, criterios ganancia/desvío/equilibrio, restricciones de capacidad, peso, desvío, envíos propios y casos límite, lugar libre con envíos ya aceptados); rutas: `RutasTests` (inserción del recorrido, `PolylineCodec`, mock y `GeoUtil`), `RutaServicioGoogleTests` (parseo, caché, errores, comparación y geocoding con `HttpMessageHandler` falso) y , `RutaServicioConRespaldoTests` (respaldo al mock y pausa ante fallas de red), `RutaServicioOsrmTests`, `RutasOpcionesTests` y `RutasOpcionesOsrmTests` (selección de proveedor), `RutasControllerTests` (`POST api/rutas/calcular`), `DireccionServicioPhotonTests`, `DireccionServicioFijoTests` y `DireccionServicioConRespaldoTests`|
 | — | README (cómo correr y configurar BD desde cero) | — | — | ❌ |
 
 ## 6. Mocks y pendientes transversales
@@ -228,61 +228,56 @@ Leyenda: ✅ hecho · 🟡 parcial/mock · ❌ no existe. Rutas de API sugeridas
   `TokenHandler` lo agrega como `Authorization: Bearer`. También hay `FallbackPolicy`: toda pantalla
   exige sesión salvo `CuentaController` y los archivos estáticos. Nombre del usuario en vistas: `User.Identity.Name`.
 
-### 6.2 Servicio de rutas / mapas
+### 6.2 Direcciones, rutas y mapas
 
-**Servicio en la API (`IRutaServicio`)**
-- Interfaz con coordenadas: `CalcularRutaAsync(recorrido)` (origen, paradas y destino en orden) y
-  `CompararConEnvioAsync(recorridoHabitual, retiro, entrega)` (distancia y tiempo habitual vs. con el envío,
-  desvío y tiempo adicional). Completa solo datos de ruta: el monto, peso, capacidad y ganancia por km los
-  compone `OportunidadesServicio`.
-- Implementaciones en `API/Servicios/Rutas/`: `RutaServicioGoogle` (Routes API por REST, sin tráfico, caché en
-  memoria por coordenadas) y `RutaServicioMock` (valores simulados). Helpers: `ComparadorRutas`,
-  `InsercionRecorrido` (elige dónde van el retiro y la entrega, retiro antes que entrega, por menor largo en
-  línea recta), `GeoUtil` (Haversine y prefiltros) y `PolylineCodec`.
-- Selección por configuración: `Rutas:Proveedor` = `Auto` (default: Google si hay key, si no mock) |
-  `Google` (falla al arrancar si falta la key) | `Mock`. La key del servidor va en user-secrets de la API:
-  `dotnet user-secrets set "Rutas:GoogleApiKey" "<clave>" --project RuteaYa.API`. `Rutas:RespaldoAlMock` (default `true`) 
-  activa el respaldo al mock cuando se usa Google. El arranque loguea `Servicio de rutas: Mock | Google (con respaldo al mock) | 
-  Google (sin respaldo)` (con IIS Express se ve en Salida → Depurar).
-- Respaldo (`RutaServicioConRespaldo`, decorador registrado en `Program.cs`): si Google lanza `RutaNoDisponibleException`, 
-  falla la red, hay timeout o la respuesta viene rota, responde con el mock y deja un `LogWarning` 
-  (con el mock, distancias, desvíos y tiempos son simulados). Ante fallas de red o timeout pausa Google durante 60 s para no 
-  esperar el timeout en cada llamada; si es solo una ruta no encontrada o una key inválida, no pausa. 
-  No tapa la cancelación del llamador ni los errores de programación. Para probar que Google anda de verdad, 
-  poner `Rutas:RespaldoAlMock = false`.
-- La key del servidor es **distinta** de la del mapa: sin restricción de sitios web y solo con Routes API.
-  **No usar Geocoding API** (exige facturación; el proyecto de Google es un Maps Demo Project sin cuenta de
-  facturación, así que no se puede cobrar). Por eso los métodos de texto (`GeocodificarDireccionAsync`,
-  `CalcularRutaConParadasAsync`, `CalcularRutaAlternativaEnvioAsync`, `CalcularDesvioAsync`,
-  `ObtenerDetalleOportunidadAsync`) son legado y fallan con Google: usar siempre los de coordenadas.
-- `ViajeServicio` calcula `Viaje.DistanciaKm/DuracionMin` al crear y editar con `CalcularRutaAsync`, pasando
-  las coordenadas del recorrido completo en orden. `OportunidadesServicio` usa `CompararConEnvioAsync`.
-- Direcciones: `ViajeServicio.BuscarDireccionesAsync` filtra una lista fija de 12 barrios (con coordenadas) y
-  también la usa Nuevo envío (`Viajes/BuscarDirecciones`).
+No hace falta ninguna API key: Photon, OSRM y OpenStreetMap son servicios públicos de uso moderado y sin garantía de
+disponibilidad, así que todo tiene un respaldo local si fallan.
 
-**Mapa en el navegador**
-- Partial `Views/Shared/_MapaRuta.cshtml` (la usan `_FormularioViaje` en Nuevo/Editar y `Viajes/Detalle`) +
-  `wwwroot/js/mapa-viaje.js`, con Maps JavaScript API y Routes API (`Route.computeRoutes`; la
-  `DirectionsService` legacy no está habilitada en proyectos nuevos). En el formulario lee las coordenadas de
-  los hidden inputs que completa `formulario-viaje.js` y se actualiza con el evento `ruta:cambio`
-  (`avisarCambioRuta()`) o con el botón "Actualizar ruta"; en Detalle toma los datos de `ViajeDetalleDto`
-  (`ViewData["ViajeMapa"]`, JSON en `#mapa-datos`). Las paradas respetan el orden elegido. La polilínea se
-  calcula en el navegador, no en la API.
-- Key del navegador: `GoogleMaps:ApiKey` (config del MVC), en user-secrets del MVC
-  (`dotnet user-secrets set "GoogleMaps:ApiKey" "<clave>" --project RuteaYa.MVC`). Restringida por referrer
-  HTTP (`localhost:*`) y a Maps JavaScript API + Routes API. Sin key, la partial muestra "Mapa no disponible"
-  en lugar del mapa y el resto del formulario funciona.
-- Comparación en Detalle de oportunidad: partial `Views/Shared/_MapaComparacion.cshtml` + `wwwroot/js/mapa-comparacion.js`. 
-  Decodifica las polylines de `RutaHabitual` y `RutaConEnvio` (`DetalleOportunidadRutaDto`) con la librería `geometry` y 
-  las dibuja en gris y azul. Usa la misma key del navegador (`GoogleMaps:ApiKey`); sin key o sin trazado muestra un aviso. 
-  No marca el retiro ni la entrega porque el DTO no trae sus coordenadas.
+**Direcciones (`IDireccionServicio`, API)**
+- `GET api/viajes/direcciones?texto=` (`ViajesController`) la usan Nuevo/Editar viaje y Nuevo envío (vía `Viajes/BuscarDirecciones`).
+  Implementaciones en `API/Servicios/Direcciones/`: `DireccionServicioPhoton` (Photon de OpenStreetMap, sin key; 5 resultados,
+  sesgo y bbox del Gran Buenos Aires, solo AR, caché de 10 minutos, sin textos repetidos) y `DireccionServicioFijo` (12 barrios con coordenadas).
+- `DireccionServicioConRespaldo` (decorador registrado en `Program.cs`): si Photon falla (error HTTP, 429, timeout o respuesta inválida)
+  responde con la lista fija, loguea un `LogWarning` y pausa Photon 60 s. No tapa la cancelación del llamador.
+- Configuración: `Direcciones:Proveedor` = `Photon` (default) | `Fijo`; `Direcciones:RespaldoAlFijo` (default `true`).
+  El JS (`formulario-viaje.js`, `formulario-envio.js`) espera 1000 ms y pide mínimo 3 caracteres para respetar el uso justo de Photon.
+- Los textos guardados en la BD pueden mezclar el formato viejo ("Belgrano, CABA") con el de Photon.
 
-**Pendiente**
-- Tests de `RutasOpciones.UsarGoogle()`.
-- Con `Rutas:RespaldoAlMock = false` y Google caído, Oportunidades muestra la lista vacía: cada envío sin ruta
-  se descarta (queda un `LogWarning` por envío en `OportunidadesServicio`).
-- Borrar los métodos de texto de `IRutaServicio` y migrar `RutasController`.
-- Buscador de direcciones real (hoy lista fija).
+**Rutas (`IRutaServicio`, API)**
+- Interfaz con coordenadas: `CalcularRutaAsync(recorrido)` (origen, paradas y destino en orden) y `CompararConEnvioAsync(recorridoHabitual,
+  retiro, entrega)` (distancia y tiempo habitual vs. con el envío, desvío y tiempo adicional). Completa solo datos de ruta: el monto, peso,
+  capacidad y ganancia por km los compone `OportunidadesServicio`.
+- Implementaciones en `API/Servicios/Rutas/`: `RutaServicioOsrm` (OSRM, sin key), `RutaServicioGoogle` (Routes API, opcional, con key) y
+  `RutaServicioMock` (valores simulados a partir de la distancia en línea recta). Helpers: `ComparadorRutas`, `InsercionRecorrido` (elige dónde
+  van el retiro y la entrega, retiro antes que entrega, por menor largo en línea recta), `GeoUtil` (Haversine y prefiltros) y `PolylineCodec`.
+- Selección por configuración: `Rutas:Proveedor` = `Auto` (default: Google si hay `Rutas:GoogleApiKey`; si no, OSRM) | `Google` (falla al
+  arrancar si falta la key) | `Osrm` | `Mock`. `Rutas:OsrmUrl` (default: servidor público de demo) y `Rutas:OsrmIntervaloMs` (default 1000).
+  La key opcional va en user-secrets de la API: `dotnet user-secrets set "Rutas:GoogleApiKey" "<clave>" --project RuteaYa.API`.
+  El arranque loguea `Servicio de rutas: Mock | OSRM | Google` más ` (con respaldo al mock)` o ` (sin respaldo)`.
+- `RutaServicioOsrm`: las coordenadas van como longitud,latitud; pide la ruta como polyline de precisión 5 (el mismo formato que Google, así
+  que sirven `PolylineCodec` y los mapas). Caché de 24 h por coordenadas y cola con intervalo mínimo entre consultas (el servidor público
+  pide 1 request por segundo). 429/5xx → `HttpRequestException`; 4xx o respuesta sin ruta → `RutaNoDisponibleException`.
+- Respaldo (`RutaServicioConRespaldo`, decorador registrado en `Program.cs`, `Rutas:RespaldoAlMock`, default `true`): si el proveedor real
+  lanza `RutaNoDisponibleException`, falla la red, hay timeout o la respuesta viene rota, responde con el mock y deja un `LogWarning`
+  (con el mock, distancias, desvíos y tiempos son simulados). Ante fallas de red o timeout pausa al proveedor 60 s; una ruta no encontrada
+  o una key inválida no pausan. No tapa la cancelación del llamador ni los errores de programación. Para comprobar que el proveedor real
+  anda, poner `Rutas:RespaldoAlMock = false`.
+- `POST api/rutas/calcular` (`RutasController`, body `ConsultaRutaDto` con 2 a 25 puntos): devuelve distancia, duración y polyline (sin los puntos
+  decodificados). 400 si el recorrido es inválido, 503 si el proveedor no está disponible. Lo usa el mapa del navegador.
+- `ViajeServicio` calcula `Viaje.DistanciaKm/DuracionMin` al crear y editar con `CalcularRutaAsync`. `OportunidadesServicio` usa `CompararConEnvioAsync`.
+- `GeocodificarDireccionAsync` y `BuscarDireccionesAsync` siguen en la interfaz pero no las usa nadie (con Google, geocodificar exige
+  Geocoding API y facturación; OSRM las rechaza con `NotSupportedException`). Las direcciones se buscan con `IDireccionServicio`.
+
+**Mapas en el navegador (Leaflet + OpenStreetMap, sin key)**
+- `Views/Shared/_LeafletRecursos.cshtml` incluye Leaflet 1.9.4 por CDN. Los tiles son de `tile.openstreetmap.org`: dejar la atribución.
+- `_MapaRuta.cshtml` (la usan `_FormularioViaje` en Nuevo/Editar y `Viajes/Detalle`) + `wwwroot/js/mapa-viaje.js`. Pide el trazado a
+  `Viajes/CalcularRuta?puntos=lat,lng;lat,lng` (MVC: `IViajeServicio.CalcularRutaAsync` → `api/rutas/calcular`); si falla, dibuja una línea recta
+  punteada y avisa. En el formulario lee las coordenadas de los hidden inputs y se actualiza con el evento `ruta:cambio`
+  (`avisarCambioRuta()`) o con el botón "Actualizar ruta"; en Detalle toma los datos de `ViajeDetalleDto` (`ViewData["ViajeMapa"]`, JSON en `#mapa-datos`).
+- `_MapaComparacion.cshtml` + `wwwroot/js/mapa-comparacion.js` (Detalle de oportunidad): dibuja las polylines de `RutaHabitual` (gris)
+  y `RutaConEnvio` (azul) de `DetalleOportunidadRutaDto`. No marca retiro ni entrega porque el DTO no trae sus coordenadas.
+- Cada JS tiene su propio decodificador de polyline (precisión 5) y sus marcadores (`.mapa-pin`, en `site.css`).
+
 
 ### 6.3 Zona horaria
 - Todo lo que se guarda como fecha/hora de evento (`Envio.CreadoEn`, `EnvioEstadoHistorial.Fecha`,
@@ -430,7 +425,7 @@ Usuario "Juan Pérez". Viajes: Belgrano → Lomas de Zamora (Lun, Mié, Vie 08:0
 5 km, 18,4 km / 55 min); Palermo → San Isidro (Vie 18:30–19:20). Envíos: Plaza Italia → Obelisco
 (Zapatillas $4.000), Recoleta → Quilmes (Documentos $3.500/$5.500), Avellaneda → Palermo (Repuesto $2.500,
 Entregado), Palermo → Avellaneda ($7.000, 8 kg), Caballito → Lomas ($4.000, 2 kg), Morón → Lomas
-($3.500, 4 kg), Barrancas → Lomas ($2.500, 1 kg). Todas esas direcciones existen en `DireccionesDePrueba()`.
+($3.500, 4 kg), Barrancas → Lomas ($2.500, 1 kg). Todas esas direcciones existen en `DireccionServicioFijo`.
 
 ## 9. Gotchas
 
@@ -452,7 +447,9 @@ Entregado), Palermo → Avellaneda ($7.000, 8 kg), Caballito → Lomas ($4.000, 
 - Los user-secrets del MVC pisan a `appsettings*.json`. Si guardaste `ApiUrl` ahí, hay que
   actualizarlo al cambiar de perfil de ejecución de la API (otro puerto), o el MVC queda
   apuntando a un puerto sin API (`SocketException ... localhost:XXXX`).
-- Sin `GoogleMaps:ApiKey` el mapa se reemplaza por un aviso; sin `Rutas:GoogleApiKey` la API usa el mock (modo `Auto`). Con `Rutas:Proveedor = Google` y sin key, la API no arranca.
-- Los user-secrets de la API solo se cargan en `Development`. Las dos claves de Google son distintas: la del servidor nunca va en el MVC.
+- Rutas:Proveedor = Google y sin key, la API no arranca. por Sin Rutas:GoogleApiKeyla API usa OSRM (modoAuto). Con Rutas:Proveedor = Google y sin key, la API no arranca. Con `Rutas:Proveedor = Google` y sin key, la API no arranca.
+- Los user-secrets de la API solo se cargan en Development
 - `dotnet build` falla con MSB3027 ("archivo bloqueado por IIS Express") si la API o el MVC siguen corriendo: detené la depuración antes de compilar.
-- Con `Rutas:RespaldoAlMock = true` (default) una key inválida o una caída de Google no se nota en pantalla: Oportunidades responde con valores del mock. Mirar el log (`RutaServicioConRespaldo: Warning`) para saber si se está usando el respaldo.
+- Con `Rutas:RespaldoAlMock = true` (default) una key inválida o una caída del proveedor de rutas no se nota en pantalla: Oportunidades responde con valores del mock. Mirar el log (`RutaServicioConRespaldo: Warning`) para saber si se está usando el respaldo.
+- El OSRM público limita a 1 request por segundo: la primera vez que se abre el Dashboard u Oportunidades con varios candidatos tarda unos segundos (después queda en caché 24 h; se pierde al reiniciar la API). Conviene abrirlos una vez antes de una demo.
+- El desvío en km puede dar 0 aunque haya minutos adicionales: al agregar paradas, el proveedor puede elegir una ruta más corta pero más lenta; el desvío no baja de 0 y el costo se ve en el tiempo adicional.
