@@ -17,5 +17,9 @@ namespace RuteaYa.API.Servicios.Interfaces
         /// </summary>
         Task<DetalleOportunidadRutaDto> CompararConEnvioAsync(
             IReadOnlyList<CoordenadaDto> recorridoHabitual, CoordenadaDto retiro, CoordenadaDto entrega, CancellationToken cancelacion = default);
+
+        Task<CoordenadaDto> GeocodificarDireccionAsync(string direccion);
+
+        Task<List<string>> BuscarDireccionesAsync(string texto);
     }
 }
