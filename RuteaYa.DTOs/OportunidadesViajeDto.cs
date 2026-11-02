@@ -10,6 +10,11 @@ namespace RuteaYa.DTOs
         public int MaxPaquetes { get; set; }
         public decimal PesoMaxKg { get; set; }
         public decimal DesvioMaxKm { get; set; }
+
+        // Lugar que le queda al viaje descontando los envíos aceptados que todavía no se entregaron.
+        public int PaquetesDisponibles { get; set; }
+        public decimal KgDisponibles { get; set; }
+
         public List<OportunidadDto> Oportunidades { get; set; } = new List<OportunidadDto>();
     }
 }

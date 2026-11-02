@@ -82,15 +82,32 @@ else
             <a class="alert-link" asp-controller="Viajes" asp-action="Detalle" asp-route-id="@viaje.ViajeId">Ver viaje</a>
         </div>
     }
+    else if (viaje.PaquetesDisponibles <= 0 || viaje.KgDisponibles <= 0)
+    {
+        <div class="alert alert-info">
+            Este viaje ya llegó a su límite (@viaje.MaxPaquetes paquetes, @viaje.PesoMaxKg.Numero() kg), así que no puede aceptar más envíos.
+            Se libera lugar cuando entregás alguno.
+            <a class="alert-link" asp-controller="Transportes" asp-action="Index">Ver mis transportes</a>
+        </div>
+    }
+    else
+    {
+        <p class="small text-muted mb-2">
+            Lugar libre: @viaje.PaquetesDisponibles de @viaje.MaxPaquetes @(viaje.MaxPaquetes == 1 ? "paquete" : "paquetes") ·
+            @viaje.KgDisponibles.Numero() de @viaje.PesoMaxKg.Numero() kg
+        </p>
+    }
 
-    <div class="card border-0 shadow-sm rounded-4">
+    var viajeLleno = viaje.Activo && (viaje.PaquetesDisponibles <= 0 || viaje.KgDisponibles <= 0);
+
+    <div class="card border-0 shadow-sm rounded-4 @(viajeLleno ? "d-none" : "")">
         @if (viaje.Oportunidades.Count == 0)
         {
             <div class="card-body text-center text-muted py-5">
                 No hay envíos compatibles con este viaje por ahora.
                 <div class="small mt-1">
                     Tienen que salir en un día del viaje antes de su fecha límite, entrar en el lugar libre
-                    (@viaje.MaxPaquetes paquetes, @viaje.PesoMaxKg.Numero() kg) y no superar @viaje.DesvioMaxKm.Numero() km de desvío.
+                    (@viaje.PaquetesDisponibles paquetes, @viaje.KgDisponibles.Numero() kg) y no superar @viaje.DesvioMaxKm.Numero() km de desvío.
                 </div>
             </div>
         }

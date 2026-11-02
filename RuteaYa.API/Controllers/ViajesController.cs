@@ -14,10 +14,12 @@ namespace RuteaYa.API.Controllers
     public class ViajesController : ControllerBase
     {
         private readonly IViajeServicio _viajeServicio;
+        private readonly IDireccionServicio _direccionServicio;
 
-        public ViajesController(IViajeServicio viajeServicio)
+        public ViajesController(IViajeServicio viajeServicio, IDireccionServicio direccionServicio)
         {
             _viajeServicio = viajeServicio;
+            _direccionServicio = direccionServicio;
         }
 
         /// <summary>Lista los viajes del usuario autenticado.</summary>
@@ -137,13 +139,14 @@ namespace RuteaYa.API.Controllers
 
         /// <summary>Busca direcciones que coincidan con el texto (origen, destino o paradas).</summary>
         /// <param name="texto">Texto a buscar, al menos 3 caracteres.</param>
+        /// <param name="cancelacion">Cancelación de la petición (la completa el framework).</param>
         [HttpGet("direcciones")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult<List<DireccionDto>>> BuscarDirecciones([FromQuery, Required, MinLength(3)] string texto)
+        public async Task<ActionResult<List<DireccionDto>>> BuscarDirecciones([FromQuery, Required, MinLength(3)] string texto, CancellationToken cancelacion)
         {
-            var direcciones = await _viajeServicio.BuscarDireccionesAsync(texto);
+            var direcciones = await _direccionServicio.BuscarAsync(texto, cancelacion);
             return Ok(direcciones);
         }
     }

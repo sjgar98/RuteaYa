@@ -56,6 +56,7 @@ builder.Services.AddHttpClient<IOptimizadorServicio, OptimizadorServicio>(c => c
 
 // Registro del servicio HTTP para la Pantalla 14 (Potencial Mensual)
 builder.Services.AddHttpClient<IPotencialServicio, PotencialServicio>(c => c.BaseAddress = apiUrl)
+builder.Services.AddHttpClient<IDashboardServicio, DashboardServicio>(c => c.BaseAddress = apiUrl)
     .AddHttpMessageHandler<TokenHandler>();
 
 var app = builder.Build();

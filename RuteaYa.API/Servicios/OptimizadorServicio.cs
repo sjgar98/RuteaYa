@@ -42,6 +42,9 @@ namespace RuteaYa.API.Servicios
             var criterioNorm = NormalizarCriterio(criterio);
             var hoy = Hoy();
 
+            // La combinación tiene que entrar en el lugar que le queda al viaje (descontando lo ya aceptado).
+            var (paquetesLibres, kgLibres) = OportunidadesServicio.CapacidadRestante(viaje);
+
             // Candidatos: envíos disponibles de otros usuarios.
             var enviosDisponibles = await _envioRepositorio.ListarDisponiblesAsync(hoy, usuarioId);
 
@@ -114,13 +117,13 @@ namespace RuteaYa.API.Servicios
                     var c = candidatos[i];
 
                     // Poda 1: cantidad de paquetes agotada — todos los siguientes tampoco entran.
-                    if (actual.Count + 1 > viaje.MaxPaquetes)
+                    if (actual.Count + 1 > paquetesLibres)
                     {
                         break;
                     }
 
                     // Poda 2: este candidato supera el peso — puede haber uno más liviano adelante, seguir.
-                    if (pesoAcum + c.Envio.PesoKg > viaje.PesoMaxKg)
+                    if (pesoAcum + c.Envio.PesoKg > kgLibres)
                     {
                         continue;
                     }

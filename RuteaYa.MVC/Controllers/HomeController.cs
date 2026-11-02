@@ -1,12 +1,21 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using RuteaYa.MVC.Servicios.Interfaces;
 
 namespace RuteaYa.MVC.Controllers
 {
+    [Authorize]
     public class HomeController : Controller
     {
-        public IActionResult Index()
+        private readonly IDashboardServicio _dashboardServicio;
+
+        public HomeController(IDashboardServicio dashboardServicio)
         {
-            return View();
+            _dashboardServicio = dashboardServicio;
+        }
+        public async Task<IActionResult> Index()
+        {
+            return View(await _dashboardServicio.ObtenerAsync());
         }
     }
 }
