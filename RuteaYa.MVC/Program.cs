@@ -54,8 +54,9 @@ builder.Services.AddHttpClient<IOportunidadesServicio, OportunidadesServicio>(c 
 builder.Services.AddHttpClient<IOptimizadorServicio, OptimizadorServicio>(c => c.BaseAddress = apiUrl)
     .AddHttpMessageHandler<TokenHandler>();
 
-// Registro del servicio HTTP para la Pantalla 14 (Potencial Mensual)
+
 builder.Services.AddHttpClient<IPotencialServicio, PotencialServicio>(c => c.BaseAddress = apiUrl)
+    .AddHttpMessageHandler<TokenHandler>();
 builder.Services.AddHttpClient<IDashboardServicio, DashboardServicio>(c => c.BaseAddress = apiUrl)
     .AddHttpMessageHandler<TokenHandler>();
 

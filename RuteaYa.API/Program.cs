@@ -13,14 +13,13 @@ using RuteaYa.Repositorios;
 using RuteaYa.Repositorios.Interfaces;
 using RuteaYa.API.Servicios.Rutas;
 using Microsoft.Extensions.Caching.Memory;
-using RuteaYa.MVC.Servicios.Interfaces;
 using RuteaYa.API.Servicios.Direcciones;
 
 var builder = WebApplication.CreateBuilder(args);
 
 using var db = new RuteaYaDbContext();
 db.Database.Migrate(); // Esto lo agregué porque no quería tocar cosas de las migraciones en la base de datos (¡le tengo respeto!)
-await InicializadorDatos.InicializarAsync(db);
+//await InicializadorDatos.InicializarAsync(db);
 
 // Add services to the container.
 builder.Services.AddControllers();

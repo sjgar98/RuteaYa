@@ -40,6 +40,20 @@ namespace RuteaYa.Repositorios
                 .OrderBy(e => e.FechaLimite)
                 .ToListAsync();
         }
+       
+
+        // NUEVO: Envíos disponibles filtrados por un rango de fechas completo para la Pantalla 14
+        public async Task<List<Envio>> ListarDisponiblesRangoAsync(DateOnly desde, DateOnly hasta, int usuarioIdExcluido)
+        {
+            return await _db.Envios
+                .AsNoTracking()
+                .Where(e => e.Estado == EstadoEnvio.BuscandoConductor
+                         && e.UsuarioId != usuarioIdExcluido
+                         && e.FechaLimite >= desde
+                         && e.FechaLimite <= hasta)
+                .OrderBy(e => e.FechaLimite)
+                .ToListAsync();
+        }
 
         public async Task<List<Envio>> ListarPorIdsAsync(List<int> ids)
         {

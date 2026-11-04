@@ -140,5 +140,6 @@ namespace RuteaYa.API.Servicios
             dto.PuedeCancelar = EnvioEstadoMaquina.PuedeTransicionar(envio.Estado, EstadoEnvio.Cancelado);
             return dto;
         }
+
     }
 }

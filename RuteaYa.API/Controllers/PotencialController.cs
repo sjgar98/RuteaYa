@@ -3,13 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using RuteaYa.API.Extensiones;
 using RuteaYa.API.Servicios.Interfaces;
 using RuteaYa.DTOs;
-using RuteaYa.MVC.Servicios.Interfaces;
 
 namespace RuteaYa.API.Controllers
 {
     [Authorize]
     [ApiController]
-    [Route("api/potencial")]
+    [Route("api/[controller]")]
     public class PotencialController : ControllerBase
     {
         private readonly IPotencialServicio _potencialServicio;
@@ -19,17 +18,21 @@ namespace RuteaYa.API.Controllers
             _potencialServicio = potencialServicio;
         }
 
-        /// <summary>
-        /// Calcula el potencial de ganancias mensual del usuario autenticado.
-        /// </summary>
         [HttpGet]
-        [ProducesResponseType(typeof(PotencialDto), StatusCodes.Status200OK)]
-        public async Task<ActionResult<PotencialDto>> ObtenerPotencial(
-            [FromQuery] string? mes,
-            [FromQuery] string? criterio)
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<PotencialMensualDto>> GetPotencial(
+            [FromQuery] string mes,
+            [FromQuery] string? criterio = "ganancia")
         {
             var usuarioId = User.ObtenerUsuarioId();
-            var resultado = await _potencialServicio.CalcularPotencialMensualAsync(usuarioId, mes, criterio);
+            var resultado = await _potencialServicio.ObtenerPotencialAsync(usuarioId, mes, criterio);
+
+            if (resultado == null)
+            {
+                return NotFound();
+            }
+
             return Ok(resultado);
         }
     }

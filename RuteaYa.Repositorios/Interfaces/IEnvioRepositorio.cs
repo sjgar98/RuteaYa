@@ -11,5 +11,7 @@ namespace RuteaYa.Repositorios.Interfaces
         Task<Envio?> ObtenerPorIdAsync(int id);
         Task AgregarAsync(Envio envio);
         Task GuardarCambiosAsync();
+
+        Task<List<Envio>> ListarDisponiblesRangoAsync(DateOnly desde, DateOnly hasta, int usuarioIdExcluido);
     }
 }
