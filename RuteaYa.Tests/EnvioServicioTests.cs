@@ -301,6 +301,11 @@ namespace RuteaYa.Tests
                 CantidadGuardados++;
                 return Task.CompletedTask;
             }
+
+            public Task<List<Envio>> ListarDisponiblesRangoAsync(DateOnly desde, DateOnly hasta, int usuarioIdExcluido)
+            {
+                throw new NotImplementedException();
+            }
         }
     }
 }

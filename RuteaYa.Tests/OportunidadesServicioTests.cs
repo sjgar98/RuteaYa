@@ -642,6 +642,11 @@ namespace RuteaYa.Tests
             {
                 return Task.CompletedTask;
             }
+
+            public Task<List<Envio>> ListarDisponiblesRangoAsync(DateOnly desde, DateOnly hasta, int usuarioIdExcluido)
+            {
+                throw new NotImplementedException();
+            }
         }
 
         private class AsignacionRepositorioFalso : IAsignacionRepositorio

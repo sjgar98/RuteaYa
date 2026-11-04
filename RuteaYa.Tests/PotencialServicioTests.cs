@@ -192,6 +192,11 @@ namespace RuteaYa.Tests
             public Task AgregarAsync(Viaje viaje) { Viajes.Add(viaje); return Task.CompletedTask; }
             public Task GuardarCambiosAsync() => Task.CompletedTask;
             public Task<List<Viaje>> ListarPorUsuarioAsync(int usuarioId) => Task.FromResult(Viajes.Where(v => v.UsuarioId == usuarioId).ToList());
+
+            public Task<List<Viaje>> ListarPorUsuarioAsync(int usuarioId, bool? activo = null)
+            {
+                throw new NotImplementedException();
+            }
         }
 
         private class EnvioRepositorioFalso : IEnvioRepositorio

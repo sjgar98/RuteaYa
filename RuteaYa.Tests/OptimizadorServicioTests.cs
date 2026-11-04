@@ -407,6 +407,11 @@ namespace RuteaYa.Tests
 
             public Task AgregarAsync(Envio envio) { Envios.Add(envio); return Task.CompletedTask; }
             public Task GuardarCambiosAsync() => Task.CompletedTask;
+
+            public Task<List<Envio>> ListarDisponiblesRangoAsync(DateOnly desde, DateOnly hasta, int usuarioIdExcluido)
+            {
+                throw new NotImplementedException();
+            }
         }
 
         private class AsignacionRepositorioFalso : IAsignacionRepositorio
