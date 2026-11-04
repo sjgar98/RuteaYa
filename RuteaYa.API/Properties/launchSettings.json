@@ -1,30 +1,3 @@
-//{
-//  "$schema": "https://json.schemastore.org/launchsettings.json",
-//  "profiles": {
-//    "http": {
-//      "commandName": "Project",
-//      "dotnetRunMessages": true,
-//      "launchBrowser": true,
-//      "launchUrl": "swagger",
-//      "applicationUrl": "http://localhost:5125",
-//      "environmentVariables": {
-//        "ASPNETCORE_ENVIRONMENT": "Development"
-//      }
-//    },
-//    "https": {
-//      "commandName": "Project",
-//      "dotnetRunMessages": true,
-//      "launchBrowser": true,
-//      "launchUrl": "swagger",
-//      "applicationUrl": "https://localhost:7134;http://localhost:5125",
-//      "environmentVariables": {
-//        "ASPNETCORE_ENVIRONMENT": "Development"
-//      }
-//    }
-//  }
-//}
-
-
 {
   "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
@@ -35,12 +8,7 @@
       "launchUrl": "swagger",
       "applicationUrl": "http://localhost:5125",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "RUTEAYA_DB_HOST": "localhost",
-        "RUTEAYA_DB_PORT": "1433",
-        "RUTEAYA_DB_NAME": "RuteaYa",
-        "RUTEAYA_DB_USER": "sa",
-        "RUTEAYA_DB_PASSWORD": "RuteaYa2026!Strong"
+        "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
     "https": {
@@ -50,29 +18,61 @@
       "launchUrl": "swagger",
       "applicationUrl": "https://localhost:7134;http://localhost:5125",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "RUTEAYA_DB_HOST": "localhost",
-        "RUTEAYA_DB_PORT": "1433",
-        "RUTEAYA_DB_NAME": "RuteaYa",
-        "RUTEAYA_DB_USER": "sa",
-        "RUTEAYA_DB_PASSWORD": "RuteaYa2026!Strong"
-      }
-    },
-    "IIS Express": {
-      "commandName": "IISExpress",
-      "launchBrowser": true,
-      "launchUrl": "swagger",
-      "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }
-  },
-  "iisSettings": {
-    "windowsAuthentication": false,
-    "anonymousAuthentication": true,
-    "iisExpress": {
-      "applicationUrl": "http://localhost:59220/",
-      "sslPort": 44393
-    }
   }
 }
+
+
+//{
+//  "$schema": "https://json.schemastore.org/launchsettings.json",
+//  "profiles": {
+//    "http": {
+//      "commandName": "Project",
+//      "dotnetRunMessages": true,
+//      "launchBrowser": true,
+//      "launchUrl": "swagger",
+//      "applicationUrl": "http://localhost:5125",
+//      "environmentVariables": {
+//        "ASPNETCORE_ENVIRONMENT": "Development",
+//        "RUTEAYA_DB_HOST": "localhost",
+//        "RUTEAYA_DB_PORT": "1433",
+//        "RUTEAYA_DB_NAME": "RuteaYa",
+//        "RUTEAYA_DB_USER": "sa",
+//        "RUTEAYA_DB_PASSWORD": "RuteaYa2026!Strong"
+//      }
+//    },
+//    "https": {
+//      "commandName": "Project",
+//      "dotnetRunMessages": true,
+//      "launchBrowser": true,
+//      "launchUrl": "swagger",
+//      "applicationUrl": "https://localhost:7134;http://localhost:5125",
+//      "environmentVariables": {
+//        "ASPNETCORE_ENVIRONMENT": "Development",
+//        "RUTEAYA_DB_HOST": "localhost",
+//        "RUTEAYA_DB_PORT": "1433",
+//        "RUTEAYA_DB_NAME": "RuteaYa",
+//        "RUTEAYA_DB_USER": "sa",
+//        "RUTEAYA_DB_PASSWORD": "RuteaYa2026!Strong"
+//      }
+//    },
+//    "IIS Express": {
+//      "commandName": "IISExpress",
+//      "launchBrowser": true,
+//      "launchUrl": "swagger",
+//      "environmentVariables": {
+//        "ASPNETCORE_ENVIRONMENT": "Development"
+//      }
+//    }
+//  },
+//  "iisSettings": {
+//    "windowsAuthentication": false,
+//    "anonymousAuthentication": true,
+//    "iisExpress": {
+//      "applicationUrl": "http://localhost:59220/",
+//      "sslPort": 44393
+//    }
+//  }
+//}
