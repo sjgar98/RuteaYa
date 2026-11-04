@@ -61,6 +61,85 @@ namespace RuteaYa.Entidades.Migrations
                     b.HasIndex("ViajeId");
 
                     b.ToTable("Asignaciones");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            AsignadoEn = new DateTime(2026, 11, 2, 14, 0, 0, 0, DateTimeKind.Unspecified),
+                            DesvioKm = 1.2m,
+                            EnvioId = 7,
+                            FechaViaje = new DateOnly(2026, 11, 6),
+                            Ganancia = 3000m,
+                            TiempoExtraMin = 6,
+                            ViajeId = 2
+                        },
+                        new
+                        {
+                            Id = 2,
+                            AsignadoEn = new DateTime(2026, 10, 28, 14, 0, 0, 0, DateTimeKind.Unspecified),
+                            DesvioKm = 0.8m,
+                            EnvioId = 8,
+                            FechaViaje = new DateOnly(2026, 10, 30),
+                            Ganancia = 4500m,
+                            TiempoExtraMin = 4,
+                            ViajeId = 2
+                        },
+                        new
+                        {
+                            Id = 3,
+                            AsignadoEn = new DateTime(2026, 9, 5, 14, 0, 0, 0, DateTimeKind.Unspecified),
+                            DesvioKm = 1.0m,
+                            EnvioId = 9,
+                            FechaViaje = new DateOnly(2026, 9, 8),
+                            Ganancia = 3000m,
+                            TiempoExtraMin = 5,
+                            ViajeId = 3
+                        },
+                        new
+                        {
+                            Id = 4,
+                            AsignadoEn = new DateTime(2026, 9, 20, 14, 0, 0, 0, DateTimeKind.Unspecified),
+                            DesvioKm = 1.5m,
+                            EnvioId = 10,
+                            FechaViaje = new DateOnly(2026, 9, 24),
+                            Ganancia = 5000m,
+                            TiempoExtraMin = 7,
+                            ViajeId = 3
+                        },
+                        new
+                        {
+                            Id = 5,
+                            AsignadoEn = new DateTime(2026, 10, 2, 14, 0, 0, 0, DateTimeKind.Unspecified),
+                            DesvioKm = 2.0m,
+                            EnvioId = 11,
+                            FechaViaje = new DateOnly(2026, 10, 6),
+                            Ganancia = 4500m,
+                            TiempoExtraMin = 9,
+                            ViajeId = 3
+                        },
+                        new
+                        {
+                            Id = 6,
+                            AsignadoEn = new DateTime(2026, 10, 20, 14, 0, 0, 0, DateTimeKind.Unspecified),
+                            DesvioKm = 1.1m,
+                            EnvioId = 13,
+                            FechaViaje = new DateOnly(2026, 10, 24),
+                            Ganancia = 2500m,
+                            TiempoExtraMin = 5,
+                            ViajeId = 4
+                        },
+                        new
+                        {
+                            Id = 7,
+                            AsignadoEn = new DateTime(2026, 11, 1, 14, 0, 0, 0, DateTimeKind.Unspecified),
+                            DesvioKm = 0.7m,
+                            EnvioId = 14,
+                            FechaViaje = new DateOnly(2026, 11, 7),
+                            Ganancia = 3500m,
+                            TiempoExtraMin = 3,
+                            ViajeId = 4
+                        });
                 });
 
             modelBuilder.Entity("RuteaYa.Entidades.Envio", b =>
@@ -127,6 +206,296 @@ namespace RuteaYa.Entidades.Migrations
                     b.HasIndex("UsuarioId");
 
                     b.ToTable("Envios");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreadoEn = new DateTime(2026, 10, 28, 13, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descripcion = "Caja con zapatillas",
+                            DestinoDir = "Lomas de Zamora, Buenos Aires",
+                            DestinoLat = -34.760900m,
+                            DestinoLng = -58.406300m,
+                            Estado = (byte)1,
+                            FechaLimite = new DateOnly(2027, 6, 30),
+                            Monto = 4000m,
+                            OrigenDir = "Caballito, CABA",
+                            OrigenLat = -34.618900m,
+                            OrigenLng = -58.442200m,
+                            PesoKg = 2m,
+                            Tamano = (byte)1,
+                            UsuarioId = 2
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreadoEn = new DateTime(2026, 10, 28, 13, 10, 0, 0, DateTimeKind.Unspecified),
+                            Descripcion = "Documentos y carpetas",
+                            DestinoDir = "Lomas de Zamora, Buenos Aires",
+                            DestinoLat = -34.760900m,
+                            DestinoLng = -58.406300m,
+                            Estado = (byte)1,
+                            FechaLimite = new DateOnly(2027, 6, 30),
+                            Monto = 5500m,
+                            OrigenDir = "Palermo, CABA",
+                            OrigenLat = -34.588900m,
+                            OrigenLng = -58.430600m,
+                            PesoKg = 6m,
+                            Tamano = (byte)2,
+                            UsuarioId = 2
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CreadoEn = new DateTime(2026, 10, 29, 14, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descripcion = "Caja de herramientas",
+                            DestinoDir = "Caballito, CABA",
+                            DestinoLat = -34.618900m,
+                            DestinoLng = -58.442200m,
+                            Estado = (byte)1,
+                            FechaLimite = new DateOnly(2027, 6, 30),
+                            Monto = 3500m,
+                            OrigenDir = "Plaza Italia, Palermo, CABA",
+                            OrigenLat = -34.581000m,
+                            OrigenLng = -58.420800m,
+                            PesoKg = 4m,
+                            Tamano = (byte)2,
+                            UsuarioId = 2
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CreadoEn = new DateTime(2026, 10, 29, 14, 20, 0, 0, DateTimeKind.Unspecified),
+                            Descripcion = "Monitor",
+                            DestinoDir = "Avellaneda, Buenos Aires",
+                            DestinoLat = -34.662700m,
+                            DestinoLng = -58.365300m,
+                            Estado = (byte)1,
+                            FechaLimite = new DateOnly(2027, 6, 30),
+                            Monto = 7000m,
+                            OrigenDir = "Palermo, CABA",
+                            OrigenLat = -34.588900m,
+                            OrigenLng = -58.430600m,
+                            PesoKg = 8m,
+                            Tamano = (byte)3,
+                            UsuarioId = 2
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CreadoEn = new DateTime(2026, 10, 30, 12, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descripcion = "Libro",
+                            DestinoDir = "Lomas de Zamora, Buenos Aires",
+                            DestinoLat = -34.760900m,
+                            DestinoLng = -58.406300m,
+                            Estado = (byte)1,
+                            FechaLimite = new DateOnly(2027, 6, 30),
+                            Monto = 2500m,
+                            OrigenDir = "Barracas, CABA",
+                            OrigenLat = -34.645300m,
+                            OrigenLng = -58.382600m,
+                            PesoKg = 1m,
+                            Tamano = (byte)1,
+                            UsuarioId = 2
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CreadoEn = new DateTime(2026, 10, 30, 12, 30, 0, 0, DateTimeKind.Unspecified),
+                            Descripcion = "Zapatillas",
+                            DestinoDir = "San Isidro, Buenos Aires",
+                            DestinoLat = -34.470800m,
+                            DestinoLng = -58.528600m,
+                            Estado = (byte)1,
+                            FechaLimite = new DateOnly(2027, 6, 30),
+                            Monto = 4000m,
+                            OrigenDir = "Plaza Italia, Palermo, CABA",
+                            OrigenLat = -34.581000m,
+                            OrigenLng = -58.420800m,
+                            PesoKg = 1.5m,
+                            Tamano = (byte)1,
+                            UsuarioId = 2
+                        },
+                        new
+                        {
+                            Id = 7,
+                            CreadoEn = new DateTime(2026, 10, 31, 15, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descripcion = "Bolso de mano",
+                            DestinoDir = "San Isidro, Buenos Aires",
+                            DestinoLat = -34.470800m,
+                            DestinoLng = -58.528600m,
+                            Estado = (byte)3,
+                            FechaLimite = new DateOnly(2026, 11, 30),
+                            Monto = 3000m,
+                            OrigenDir = "Belgrano, CABA",
+                            OrigenLat = -34.562700m,
+                            OrigenLng = -58.456500m,
+                            PesoKg = 2m,
+                            Tamano = (byte)1,
+                            UsuarioId = 2
+                        },
+                        new
+                        {
+                            Id = 8,
+                            CreadoEn = new DateTime(2026, 10, 26, 15, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descripcion = "Caja de vinos",
+                            DestinoDir = "San Isidro, Buenos Aires",
+                            DestinoLat = -34.470800m,
+                            DestinoLng = -58.528600m,
+                            Estado = (byte)4,
+                            FechaLimite = new DateOnly(2026, 11, 25),
+                            Monto = 4500m,
+                            OrigenDir = "Plaza Italia, Palermo, CABA",
+                            OrigenLat = -34.581000m,
+                            OrigenLng = -58.420800m,
+                            PesoKg = 3m,
+                            Tamano = (byte)2,
+                            UsuarioId = 2
+                        },
+                        new
+                        {
+                            Id = 9,
+                            CreadoEn = new DateTime(2026, 9, 3, 15, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descripcion = "Repuestos de auto",
+                            DestinoDir = "Palermo, CABA",
+                            DestinoLat = -34.588900m,
+                            DestinoLng = -58.430600m,
+                            Estado = (byte)5,
+                            FechaLimite = new DateOnly(2026, 10, 3),
+                            Monto = 3000m,
+                            OrigenDir = "Avellaneda, Buenos Aires",
+                            OrigenLat = -34.662700m,
+                            OrigenLng = -58.365300m,
+                            PesoKg = 3m,
+                            Tamano = (byte)2,
+                            UsuarioId = 2
+                        },
+                        new
+                        {
+                            Id = 10,
+                            CreadoEn = new DateTime(2026, 9, 18, 15, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descripcion = "Notebook",
+                            DestinoDir = "Palermo, CABA",
+                            DestinoLat = -34.588900m,
+                            DestinoLng = -58.430600m,
+                            Estado = (byte)5,
+                            FechaLimite = new DateOnly(2026, 10, 18),
+                            Monto = 5000m,
+                            OrigenDir = "Barracas, CABA",
+                            OrigenLat = -34.645300m,
+                            OrigenLng = -58.382600m,
+                            PesoKg = 2m,
+                            Tamano = (byte)1,
+                            UsuarioId = 2
+                        },
+                        new
+                        {
+                            Id = 11,
+                            CreadoEn = new DateTime(2026, 9, 30, 15, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descripcion = "Cuadro",
+                            DestinoDir = "Recoleta, CABA",
+                            DestinoLat = -34.587500m,
+                            DestinoLng = -58.397400m,
+                            Estado = (byte)5,
+                            FechaLimite = new DateOnly(2026, 10, 30),
+                            Monto = 4500m,
+                            OrigenDir = "Avellaneda, Buenos Aires",
+                            OrigenLat = -34.662700m,
+                            OrigenLng = -58.365300m,
+                            PesoKg = 4m,
+                            Tamano = (byte)3,
+                            UsuarioId = 2
+                        },
+                        new
+                        {
+                            Id = 12,
+                            CreadoEn = new DateTime(2026, 10, 10, 15, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descripcion = "Ropa",
+                            DestinoDir = "Morón, Buenos Aires",
+                            DestinoLat = -34.653400m,
+                            DestinoLng = -58.619800m,
+                            Estado = (byte)6,
+                            FechaLimite = new DateOnly(2026, 11, 9),
+                            Monto = 2000m,
+                            OrigenDir = "Caballito, CABA",
+                            OrigenLat = -34.618900m,
+                            OrigenLng = -58.442200m,
+                            PesoKg = 2m,
+                            Tamano = (byte)1,
+                            UsuarioId = 2
+                        },
+                        new
+                        {
+                            Id = 13,
+                            CreadoEn = new DateTime(2026, 10, 18, 15, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descripcion = "Repuesto",
+                            DestinoDir = "Palermo, CABA",
+                            DestinoLat = -34.588900m,
+                            DestinoLng = -58.430600m,
+                            Estado = (byte)5,
+                            FechaLimite = new DateOnly(2026, 11, 17),
+                            Monto = 2500m,
+                            OrigenDir = "Avellaneda, Buenos Aires",
+                            OrigenLat = -34.662700m,
+                            OrigenLng = -58.365300m,
+                            PesoKg = 1m,
+                            Tamano = (byte)1,
+                            UsuarioId = 1
+                        },
+                        new
+                        {
+                            Id = 14,
+                            CreadoEn = new DateTime(2026, 10, 30, 15, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descripcion = "Documentos",
+                            DestinoDir = "Quilmes, Buenos Aires",
+                            DestinoLat = -34.720600m,
+                            DestinoLng = -58.254600m,
+                            Estado = (byte)2,
+                            FechaLimite = new DateOnly(2026, 11, 29),
+                            Monto = 3500m,
+                            OrigenDir = "Recoleta, CABA",
+                            OrigenLat = -34.587500m,
+                            OrigenLng = -58.397400m,
+                            PesoKg = 0.5m,
+                            Tamano = (byte)1,
+                            UsuarioId = 1
+                        },
+                        new
+                        {
+                            Id = 15,
+                            CreadoEn = new DateTime(2026, 11, 1, 15, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descripcion = "Caja de libros",
+                            DestinoDir = "Belgrano, CABA",
+                            DestinoLat = -34.562700m,
+                            DestinoLng = -58.456500m,
+                            Estado = (byte)1,
+                            FechaLimite = new DateOnly(2027, 6, 30),
+                            Monto = 3000m,
+                            OrigenDir = "San Isidro, Buenos Aires",
+                            OrigenLat = -34.470800m,
+                            OrigenLng = -58.528600m,
+                            PesoKg = 5m,
+                            Tamano = (byte)2,
+                            UsuarioId = 1
+                        },
+                        new
+                        {
+                            Id = 16,
+                            CreadoEn = new DateTime(2026, 9, 12, 15, 0, 0, 0, DateTimeKind.Unspecified),
+                            Descripcion = "Regalo",
+                            DestinoDir = "Caballito, CABA",
+                            DestinoLat = -34.618900m,
+                            DestinoLng = -58.442200m,
+                            Estado = (byte)6,
+                            FechaLimite = new DateOnly(2026, 10, 12),
+                            Monto = 2000m,
+                            OrigenDir = "Plaza Italia, Palermo, CABA",
+                            OrigenLat = -34.581000m,
+                            OrigenLng = -58.420800m,
+                            PesoKg = 1m,
+                            Tamano = (byte)1,
+                            UsuarioId = 1
+                        });
                 });
 
             modelBuilder.Entity("RuteaYa.Entidades.EnvioEstadoHistorial", b =>
@@ -154,6 +523,312 @@ namespace RuteaYa.Entidades.Migrations
                     b.HasIndex("EnvioId");
 
                     b.ToTable("EnvioEstadoHistorial");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            EnvioId = 1,
+                            EstadoNuevo = (byte)1,
+                            Fecha = new DateTime(2026, 10, 28, 13, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 2,
+                            EnvioId = 2,
+                            EstadoNuevo = (byte)1,
+                            Fecha = new DateTime(2026, 10, 28, 13, 10, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 3,
+                            EnvioId = 3,
+                            EstadoNuevo = (byte)1,
+                            Fecha = new DateTime(2026, 10, 29, 14, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 4,
+                            EnvioId = 4,
+                            EstadoNuevo = (byte)1,
+                            Fecha = new DateTime(2026, 10, 29, 14, 20, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 5,
+                            EnvioId = 5,
+                            EstadoNuevo = (byte)1,
+                            Fecha = new DateTime(2026, 10, 30, 12, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 6,
+                            EnvioId = 6,
+                            EstadoNuevo = (byte)1,
+                            Fecha = new DateTime(2026, 10, 30, 12, 30, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 7,
+                            EnvioId = 7,
+                            EstadoNuevo = (byte)1,
+                            Fecha = new DateTime(2026, 10, 31, 15, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 8,
+                            EnvioId = 7,
+                            EstadoAnterior = (byte)1,
+                            EstadoNuevo = (byte)2,
+                            Fecha = new DateTime(2026, 11, 2, 14, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 9,
+                            EnvioId = 7,
+                            EstadoAnterior = (byte)2,
+                            EstadoNuevo = (byte)3,
+                            Fecha = new DateTime(2026, 11, 6, 12, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 10,
+                            EnvioId = 8,
+                            EstadoNuevo = (byte)1,
+                            Fecha = new DateTime(2026, 10, 26, 15, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 11,
+                            EnvioId = 8,
+                            EstadoAnterior = (byte)1,
+                            EstadoNuevo = (byte)2,
+                            Fecha = new DateTime(2026, 10, 28, 14, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 12,
+                            EnvioId = 8,
+                            EstadoAnterior = (byte)2,
+                            EstadoNuevo = (byte)3,
+                            Fecha = new DateTime(2026, 10, 30, 12, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 13,
+                            EnvioId = 8,
+                            EstadoAnterior = (byte)3,
+                            EstadoNuevo = (byte)4,
+                            Fecha = new DateTime(2026, 10, 30, 12, 10, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 14,
+                            EnvioId = 9,
+                            EstadoNuevo = (byte)1,
+                            Fecha = new DateTime(2026, 9, 3, 15, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 15,
+                            EnvioId = 9,
+                            EstadoAnterior = (byte)1,
+                            EstadoNuevo = (byte)2,
+                            Fecha = new DateTime(2026, 9, 5, 14, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 16,
+                            EnvioId = 9,
+                            EstadoAnterior = (byte)2,
+                            EstadoNuevo = (byte)3,
+                            Fecha = new DateTime(2026, 9, 8, 12, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 17,
+                            EnvioId = 9,
+                            EstadoAnterior = (byte)3,
+                            EstadoNuevo = (byte)4,
+                            Fecha = new DateTime(2026, 9, 8, 12, 10, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 18,
+                            EnvioId = 9,
+                            EstadoAnterior = (byte)4,
+                            EstadoNuevo = (byte)5,
+                            Fecha = new DateTime(2026, 9, 8, 13, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 19,
+                            EnvioId = 10,
+                            EstadoNuevo = (byte)1,
+                            Fecha = new DateTime(2026, 9, 18, 15, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 20,
+                            EnvioId = 10,
+                            EstadoAnterior = (byte)1,
+                            EstadoNuevo = (byte)2,
+                            Fecha = new DateTime(2026, 9, 20, 14, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 21,
+                            EnvioId = 10,
+                            EstadoAnterior = (byte)2,
+                            EstadoNuevo = (byte)3,
+                            Fecha = new DateTime(2026, 9, 24, 12, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 22,
+                            EnvioId = 10,
+                            EstadoAnterior = (byte)3,
+                            EstadoNuevo = (byte)4,
+                            Fecha = new DateTime(2026, 9, 24, 12, 10, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 23,
+                            EnvioId = 10,
+                            EstadoAnterior = (byte)4,
+                            EstadoNuevo = (byte)5,
+                            Fecha = new DateTime(2026, 9, 24, 13, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 24,
+                            EnvioId = 11,
+                            EstadoNuevo = (byte)1,
+                            Fecha = new DateTime(2026, 9, 30, 15, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 25,
+                            EnvioId = 11,
+                            EstadoAnterior = (byte)1,
+                            EstadoNuevo = (byte)2,
+                            Fecha = new DateTime(2026, 10, 2, 14, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 26,
+                            EnvioId = 11,
+                            EstadoAnterior = (byte)2,
+                            EstadoNuevo = (byte)3,
+                            Fecha = new DateTime(2026, 10, 6, 12, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 27,
+                            EnvioId = 11,
+                            EstadoAnterior = (byte)3,
+                            EstadoNuevo = (byte)4,
+                            Fecha = new DateTime(2026, 10, 6, 12, 10, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 28,
+                            EnvioId = 11,
+                            EstadoAnterior = (byte)4,
+                            EstadoNuevo = (byte)5,
+                            Fecha = new DateTime(2026, 10, 6, 13, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 29,
+                            EnvioId = 12,
+                            EstadoNuevo = (byte)1,
+                            Fecha = new DateTime(2026, 10, 10, 15, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 30,
+                            EnvioId = 12,
+                            EstadoAnterior = (byte)1,
+                            EstadoNuevo = (byte)6,
+                            Fecha = new DateTime(2026, 10, 12, 15, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 31,
+                            EnvioId = 13,
+                            EstadoNuevo = (byte)1,
+                            Fecha = new DateTime(2026, 10, 18, 15, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 32,
+                            EnvioId = 13,
+                            EstadoAnterior = (byte)1,
+                            EstadoNuevo = (byte)2,
+                            Fecha = new DateTime(2026, 10, 20, 14, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 33,
+                            EnvioId = 13,
+                            EstadoAnterior = (byte)2,
+                            EstadoNuevo = (byte)3,
+                            Fecha = new DateTime(2026, 10, 24, 12, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 34,
+                            EnvioId = 13,
+                            EstadoAnterior = (byte)3,
+                            EstadoNuevo = (byte)4,
+                            Fecha = new DateTime(2026, 10, 24, 12, 10, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 35,
+                            EnvioId = 13,
+                            EstadoAnterior = (byte)4,
+                            EstadoNuevo = (byte)5,
+                            Fecha = new DateTime(2026, 10, 24, 13, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 36,
+                            EnvioId = 14,
+                            EstadoNuevo = (byte)1,
+                            Fecha = new DateTime(2026, 10, 30, 15, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 37,
+                            EnvioId = 14,
+                            EstadoAnterior = (byte)1,
+                            EstadoNuevo = (byte)2,
+                            Fecha = new DateTime(2026, 11, 1, 14, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 38,
+                            EnvioId = 15,
+                            EstadoNuevo = (byte)1,
+                            Fecha = new DateTime(2026, 11, 1, 15, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 39,
+                            EnvioId = 16,
+                            EstadoNuevo = (byte)1,
+                            Fecha = new DateTime(2026, 9, 12, 15, 0, 0, 0, DateTimeKind.Unspecified)
+                        },
+                        new
+                        {
+                            Id = 40,
+                            EnvioId = 16,
+                            EstadoAnterior = (byte)1,
+                            EstadoNuevo = (byte)6,
+                            Fecha = new DateTime(2026, 9, 14, 15, 0, 0, 0, DateTimeKind.Unspecified)
+                        });
                 });
 
             modelBuilder.Entity("RuteaYa.Entidades.Parada", b =>
@@ -232,6 +907,15 @@ namespace RuteaYa.Entidades.Migrations
                             Email = "prueba@ruteaya.com",
                             Nombre = "Usuario",
                             PasswordHash = "AQAAAAIAAYagAAAAEKndklYBED8heEK5UUKWAFP0VZIhX94RvKi/4waoLwHrspyn1PcxGIq8VsiZOkk/NQ=="
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Apellido = "Gómez",
+                            CreadoEn = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Email = "remitente@ruteaya.com",
+                            Nombre = "María",
+                            PasswordHash = "AQAAAAIAAYagAAAAEKndklYBED8heEK5UUKWAFP0VZIhX94RvKi/4waoLwHrspyn1PcxGIq8VsiZOkk/NQ=="
                         });
                 });
 
@@ -302,6 +986,84 @@ namespace RuteaYa.Entidades.Migrations
                     b.HasIndex("UsuarioId");
 
                     b.ToTable("Viajes");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Activo = true,
+                            DestinoDir = "Lomas de Zamora, Buenos Aires",
+                            DestinoLat = -34.760900m,
+                            DestinoLng = -58.406300m,
+                            DesvioMaxKm = 5m,
+                            DistanciaKm = 18.4m,
+                            DuracionMin = 55,
+                            HoraLlegada = new TimeOnly(8, 55, 0),
+                            HoraSalida = new TimeOnly(8, 0, 0),
+                            MaxPaquetes = 3,
+                            OrigenDir = "Belgrano, CABA",
+                            OrigenLat = -34.562700m,
+                            OrigenLng = -58.456500m,
+                            PesoMaxKg = 10m,
+                            UsuarioId = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Activo = true,
+                            DestinoDir = "San Isidro, Buenos Aires",
+                            DestinoLat = -34.470800m,
+                            DestinoLng = -58.528600m,
+                            DesvioMaxKm = 3m,
+                            DistanciaKm = 21.5m,
+                            DuracionMin = 50,
+                            HoraLlegada = new TimeOnly(19, 20, 0),
+                            HoraSalida = new TimeOnly(18, 30, 0),
+                            MaxPaquetes = 2,
+                            OrigenDir = "Palermo, CABA",
+                            OrigenLat = -34.588900m,
+                            OrigenLng = -58.430600m,
+                            PesoMaxKg = 5m,
+                            UsuarioId = 1
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Activo = false,
+                            DestinoDir = "Palermo, CABA",
+                            DestinoLat = -34.588900m,
+                            DestinoLng = -58.430600m,
+                            DesvioMaxKm = 4m,
+                            DistanciaKm = 12.0m,
+                            DuracionMin = 40,
+                            HoraLlegada = new TimeOnly(9, 40, 0),
+                            HoraSalida = new TimeOnly(9, 0, 0),
+                            MaxPaquetes = 4,
+                            OrigenDir = "Avellaneda, Buenos Aires",
+                            OrigenLat = -34.662700m,
+                            OrigenLng = -58.365300m,
+                            PesoMaxKg = 12m,
+                            UsuarioId = 1
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Activo = true,
+                            DestinoDir = "Quilmes, Buenos Aires",
+                            DestinoLat = -34.720600m,
+                            DestinoLng = -58.254600m,
+                            DesvioMaxKm = 4m,
+                            DistanciaKm = 21.0m,
+                            DuracionMin = 50,
+                            HoraLlegada = new TimeOnly(10, 50, 0),
+                            HoraSalida = new TimeOnly(10, 0, 0),
+                            MaxPaquetes = 3,
+                            OrigenDir = "Recoleta, CABA",
+                            OrigenLat = -34.587500m,
+                            OrigenLng = -58.397400m,
+                            PesoMaxKg = 8m,
+                            UsuarioId = 2
+                        });
                 });
 
             modelBuilder.Entity("RuteaYa.Entidades.ViajeDia", b =>
@@ -315,6 +1077,43 @@ namespace RuteaYa.Entidades.Migrations
                     b.HasKey("ViajeId", "DiaSemana");
 
                     b.ToTable("ViajeDias");
+
+                    b.HasData(
+                        new
+                        {
+                            ViajeId = 1,
+                            DiaSemana = (byte)1
+                        },
+                        new
+                        {
+                            ViajeId = 1,
+                            DiaSemana = (byte)3
+                        },
+                        new
+                        {
+                            ViajeId = 1,
+                            DiaSemana = (byte)5
+                        },
+                        new
+                        {
+                            ViajeId = 2,
+                            DiaSemana = (byte)5
+                        },
+                        new
+                        {
+                            ViajeId = 3,
+                            DiaSemana = (byte)2
+                        },
+                        new
+                        {
+                            ViajeId = 3,
+                            DiaSemana = (byte)4
+                        },
+                        new
+                        {
+                            ViajeId = 4,
+                            DiaSemana = (byte)6
+                        });
                 });
 
             modelBuilder.Entity("RuteaYa.Entidades.Asignacion", b =>

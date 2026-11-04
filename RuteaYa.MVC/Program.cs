@@ -24,6 +24,9 @@ builder.Services.AddHttpClient<ICuentaServicio, CuentaServicio>(c => c.BaseAddre
 builder.Services.AddHttpClient<IEnvioServicio, EnvioServicio>(c => c.BaseAddress = apiUrl)
     .AddHttpMessageHandler<TokenHandler>();
 
+builder.Services.AddHttpClient<IAsignacionServicio, AsignacionServicio>(c => c.BaseAddress = apiUrl)
+    .AddHttpMessageHandler<TokenHandler>();
+
 // Cookie del MVC. El login guarda en ella el JWT de la API como claim "token".
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -40,10 +43,8 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
 });
 
-builder.Services.AddHttpClient<IHistorialServicio, HistorialServicio>(client =>
-{
-    client.BaseAddress = new Uri(builder.Configuration["ApiUrl"]!);
-}).AddHttpMessageHandler<TokenHandler>();
+builder.Services.AddHttpClient<IHistorialServicio, HistorialServicio>(c => c.BaseAddress = apiUrl)
+    .AddHttpMessageHandler<TokenHandler>();
 
 builder.Services.AddHttpClient<ITransporteServicio, TransporteServicio>(c => c.BaseAddress = apiUrl)
     .AddHttpMessageHandler<TokenHandler>();

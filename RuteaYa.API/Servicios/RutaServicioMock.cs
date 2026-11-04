@@ -10,43 +10,8 @@ namespace RuteaYa.API.Servicios
 {
     public class RutaServicioMock : IRutaServicio
     {
-        private readonly List<string> _direccionesPrueba = new()
-        {
-            "Belgrano, CABA",
-            "Lomas de Zamora, Buenos Aires",
-            "Palermo, CABA",
-            "San Isidro, Buenos Aires",
-            "Plaza Italia, CABA",
-            "Obelisco, CABA",
-            "Recoleta, CABA",
-            "Quilmes, Buenos Aires",
-            "Avellaneda, Buenos Aires",
-            "Caballito, CABA",
-            "Morón, Buenos Aires",
-            "Barrancas de Belgrano, CABA"
-        };
-
-        public async Task<CoordenadaDto> GeocodificarDireccionAsync(string direccion)
-        {
-            await Task.Delay(50);
-            return new CoordenadaDto { Latitud = -34.6037m, Longitud = -58.3816m };
-        }
-
-
- 
-
-        public async Task<List<string>> BuscarDireccionesAsync(string texto)
-        {
-            await Task.Delay(30);
-            if (string.IsNullOrWhiteSpace(texto))
-                return _direccionesPrueba;
-
-            return _direccionesPrueba
-                .Where(d => d.Contains(texto, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        }
-    private const decimal FactorCalles = 1.3m;        // la ruta real es más larga que la línea recta
-    private const decimal VelocidadMediaKmH = 30m;
+        private const decimal FactorCalles = 1.3m;        // la ruta real es más larga que la línea recta
+        private const decimal VelocidadMediaKmH = 30m;
 
         public Task<RutaResultadoDto> CalcularRutaAsync(IReadOnlyList<CoordenadaDto> recorrido, CancellationToken cancelacion = default)
         {
@@ -67,7 +32,5 @@ namespace RuteaYa.API.Servicios
         {
             return ComparadorRutas.CompararAsync(CalcularRutaAsync, recorridoHabitual, retiro, entrega, cancelacion);
         }
-
-
     }
-  }
+}

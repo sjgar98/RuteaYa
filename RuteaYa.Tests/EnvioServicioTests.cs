@@ -284,6 +284,8 @@ namespace RuteaYa.Tests
                 return Task.FromResult(Envios.Where(e => ids.Contains(e.Id)).ToList());
             }
 
+            public Task<List<Envio>> ListarFinalizadosPorUsuarioAsync(int usuarioId) => throw new NotImplementedException();
+
             public Task<Envio?> ObtenerPorIdAsync(int id)
             {
                 return Task.FromResult(Envios.FirstOrDefault(e => e.Id == id));

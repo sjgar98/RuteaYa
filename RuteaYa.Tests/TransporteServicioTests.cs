@@ -223,7 +223,7 @@ namespace RuteaYa.Tests
                 return Task.FromResult(asignaciones);
             }
 
-            public Task<List<Asignacion>> ListarEntregadasPorConductorAsync(int conductorId, DateTime? desde, DateTime? hasta) => throw new NotImplementedException();
+            public Task<List<Asignacion>> ListarEntregadasPorConductorAsync(int conductorId, DateOnly? desde, DateOnly? hasta) => throw new NotImplementedException();
             public Task<Asignacion?> ObtenerPorIdAsync(int id)
             {
                 return Task.FromResult(Asignaciones.FirstOrDefault(a => a.Id == id));

@@ -121,8 +121,9 @@ else
                 </div>
 
                 @* Lista de envíos de la combinación óptima *@
-                <form asp-action="Confirmar" asp-route-viajeId="@Model.ViajeId" method="post">
-                    @Html.AntiForgeryToken()
+                <form asp-action="Confirmacion" method="get">
+                    <input type="hidden" name="viajeId" value="@Model.ViajeId" />
+                    <input type="hidden" name="criterio" value="@criterio" />
                     <ul class="list-group list-group-flush mb-3">
                         @foreach (var envio in Model.Optima.Envios)
                         {
@@ -145,7 +146,7 @@ else
                             Recalcular
                         </a>
                         <button type="submit" class="btn btn-dark">
-                            Confirmar y reservar (@Model.Optima.CantidadPaquetes paquete@(Model.Optima.CantidadPaquetes != 1 ? "s" : ""))
+                            Revisar y reservar (@Model.Optima.CantidadPaquetes paquete@(Model.Optima.CantidadPaquetes != 1 ? "s" : ""))
                         </button>
                     </div>
                 </form>
@@ -172,13 +173,14 @@ else
                                     @comb.PesoTotalKg.Numero() kg · desvío @comb.DesvioTotalKm.Numero() km
                                 </div>
                             </div>
-                            <form asp-action="Confirmar" asp-route-viajeId="@Model.ViajeId" method="post">
-                                @Html.AntiForgeryToken()
+                            <form asp-action="Confirmacion" method="get">
+                                <input type="hidden" name="viajeId" value="@Model.ViajeId" />
+                                <input type="hidden" name="criterio" value="@criterio" />
                                 @foreach (var e in comb.Envios)
                                 {
                                     <input type="hidden" name="envioIds" value="@e.EnvioId" />
                                 }
-                                <button type="submit" class="btn btn-outline-secondary btn-sm">Confirmar esta</button>
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">Elegir esta</button>
                             </form>
                         </div>
                         <ul class="mt-2 mb-0 ps-3">

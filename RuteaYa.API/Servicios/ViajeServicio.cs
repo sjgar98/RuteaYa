@@ -172,8 +172,22 @@ namespace RuteaYa.API.Servicios
                 .Select(p => new DireccionDto { Direccion = p.Direccion, Lat = p.Lat, Lng = p.Lng })
                 .ToList();
 
-            // TODO Paquetes asignados: mapear viaje.Asignaciones (con su Envio) cuando existan envíos y asignaciones.
-            dto.PaquetesAsignados = PaquetesDePrueba();
+            dto.PaquetesAsignados = viaje.Asignaciones
+                .OrderBy(a => a.FechaViaje)
+                .ThenBy(a => a.EnvioId)
+                .Select(a => new PaqueteAsignadoDto
+                {
+                    EnvioId = a.EnvioId,
+                    Origen = a.Envio.OrigenDir,
+                    Destino = a.Envio.DestinoDir,
+                    Descripcion = a.Envio.Descripcion,
+                    Estado = a.Envio.Estado,
+                    FechaViaje = a.FechaViaje,
+                    FechaLimite = a.Envio.FechaLimite,
+                    PesoKg = a.Envio.PesoKg,
+                    Ganancia = a.Ganancia
+                })
+                .ToList();
 
             return dto;
         }
@@ -195,21 +209,5 @@ namespace RuteaYa.API.Servicios
             dto.TieneEnviosPendientes = TieneEnviosPendientes(viaje);
             return dto;
         }
-
-        private static List<PaqueteAsignadoDto> PaquetesDePrueba()
-        {
-            return new List<PaqueteAsignadoDto>
-            {
-                new PaqueteAsignadoDto
-                {
-                    EnvioId = 1,
-                    Descripcion = "Zapatillas",
-                    Estado = EstadoEnvio.Retirado,
-                    FechaLimite = new DateOnly(2026, 11, 20),
-                    Ganancia = 4000m
-                }
-            };
-        }
-
     }
 }

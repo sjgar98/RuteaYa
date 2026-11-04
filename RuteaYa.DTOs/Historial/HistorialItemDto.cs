@@ -1,13 +1,17 @@
-﻿namespace RuteaYa.DTOs;
+﻿using RuteaYa.DTOs.Enums;
 
-public class HistorialItemDto
-
-
+namespace RuteaYa.DTOs
 {
-    public int Id { get; set; }
-    public string Tipo { get; set; } = string.Empty; 
-    public string Descripcion { get; set; } = string.Empty; 
-    public string Detalle { get; set; } = string.Empty; 
-    public decimal Monto { get; set; }
-    public DateTime Fecha { get; set; }
+    // Un ítem del historial: un viaje realizado en un mes (Tipo "Viaje", Id del viaje) o un envío propio
+    // que terminó (Tipo "Envio", Id del envío, con su Estado).
+    public class HistorialItemDto
+    {
+        public int Id { get; set; }
+        public string Tipo { get; set; } = string.Empty;
+        public string Descripcion { get; set; } = string.Empty;
+        public string Detalle { get; set; } = string.Empty;
+        public decimal Monto { get; set; }
+        public DateOnly Fecha { get; set; }
+        public EstadoEnvio? Estado { get; set; }
+    }
 }

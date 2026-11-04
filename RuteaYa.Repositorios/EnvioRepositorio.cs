@@ -49,6 +49,17 @@ namespace RuteaYa.Repositorios
                 .ToListAsync();
         }
 
+        // Envíos propios que ya terminaron (entregados o cancelados), con su historial para fechar el cierre.
+        public async Task<List<Envio>> ListarFinalizadosPorUsuarioAsync(int usuarioId)
+        {
+            return await _db.Envios
+                .AsNoTracking()
+                .Include(e => e.Historial)
+                .Where(e => e.UsuarioId == usuarioId
+                         && (e.Estado == EstadoEnvio.Entregado || e.Estado == EstadoEnvio.Cancelado))
+                .ToListAsync();
+        }
+
         // Envío con su asignación (y viaje) e historial. Los cambios de estado se registran
         // agregando a Historial y luego se llama a GuardarCambiosAsync.
         public async Task<Envio?> ObtenerPorIdAsync(int id)

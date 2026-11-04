@@ -422,6 +422,8 @@ namespace RuteaYa.Tests
             public Task<List<Envio>> ListarPorIdsAsync(List<int> ids)
                 => Task.FromResult(Envios.Where(e => ids.Contains(e.Id)).ToList());
 
+            public Task<List<Envio>> ListarFinalizadosPorUsuarioAsync(int usuarioId) => throw new NotImplementedException();
+
             public Task<Envio?> ObtenerPorIdAsync(int id)
                 => Task.FromResult(Envios.FirstOrDefault(e => e.Id == id));
 
@@ -432,7 +434,7 @@ namespace RuteaYa.Tests
         private class AsignacionRepositorioFalso : IAsignacionRepositorio
         {
             public Task<List<Asignacion>> ListarPorConductorAsync(int conductorId) => Task.FromResult(new List<Asignacion>());
-            public Task<List<Asignacion>> ListarEntregadasPorConductorAsync(int conductorId, DateTime? desde, DateTime? hasta) => throw new NotImplementedException();
+            public Task<List<Asignacion>> ListarEntregadasPorConductorAsync(int conductorId, DateOnly? desde, DateOnly? hasta) => throw new NotImplementedException();
             public Task<Asignacion?> ObtenerPorIdAsync(int id) => Task.FromResult<Asignacion?>(null);
             public Task AgregarAsync(List<Asignacion> asignaciones) => Task.CompletedTask;
             public Task GuardarCambiosAsync() => Task.CompletedTask;
@@ -468,12 +470,6 @@ namespace RuteaYa.Tests
             }
 
             public Task<RutaResultadoDto> CalcularRutaAsync(IReadOnlyList<CoordenadaDto> recorrido, CancellationToken cancelacion = default) => throw new NotSupportedException();
-            public Task<CoordenadaDto> GeocodificarDireccionAsync(string direccion) => throw new NotSupportedException();
-            public Task<RutaResultadoDto> CalcularRutaConParadasAsync(List<string> paradas) => throw new NotSupportedException();
-            public Task<RutaResultadoDto> CalcularRutaAlternativaEnvioAsync(string origen, string destino, string retiroPaquete, string entregaPaquete) => throw new NotSupportedException();
-            public Task<decimal> CalcularDesvioAsync(string rutaOriginalId, string paradaExtra) => throw new NotSupportedException();
-            public Task<DetalleOportunidadRutaDto> ObtenerDetalleOportunidadAsync(string origenHabitual, string destinoHabitual, string retiroEnvio, string entregaEnvio) => throw new NotSupportedException();
-            public Task<List<string>> BuscarDireccionesAsync(string texto) => throw new NotSupportedException();
         }
     }
 }

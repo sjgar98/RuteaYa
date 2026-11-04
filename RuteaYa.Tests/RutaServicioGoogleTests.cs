@@ -27,17 +27,13 @@ namespace RuteaYa.Tests
         """;
         }
 
-        private const string RespuestaGeocodificacion = """
-            {"status":"OK","results":[{"geometry":{"location":{"lat":-34.5627,"lng":-58.4565}}}]}
-            """;
-
         private static RutaServicioGoogle CrearServicio(ManejadorFalso manejador)
         {
             var http = new HttpClient(manejador);
             var cache = new MemoryCache(new MemoryCacheOptions());
             var opciones = Options.Create(new RutasOpciones { Proveedor = "Google", GoogleApiKey = "clave-de-prueba" });
 
-            return new RutaServicioGoogle(http, cache, opciones, new RutaServicioMock(), NullLogger<RutaServicioGoogle>.Instance);
+            return new RutaServicioGoogle(http, cache, opciones, NullLogger<RutaServicioGoogle>.Instance);
         }
 
         [Fact]
@@ -230,44 +226,6 @@ namespace RuteaYa.Tests
             Assert.Equal(0m, detalle.DesvioKm);
             Assert.Equal(0, detalle.TiempoAdicionalMinutos);
         }
-
-        [Fact]
-        public async Task GeocodificarDireccionAsync_RespuestaOk_DevuelveLasCoordenadas()
-        {
-            var manejador = new ManejadorFalso();
-            manejador.Encolar(HttpStatusCode.OK, RespuestaGeocodificacion);
-            var servicio = CrearServicio(manejador);
-
-            var coordenada = await servicio.GeocodificarDireccionAsync("Belgrano, CABA");
-
-            Assert.Equal(-34.5627m, coordenada.Latitud);
-            Assert.Equal(-58.4565m, coordenada.Longitud);
-        }
-
-        [Fact]
-        public async Task GeocodificarDireccionAsync_MismaDireccionConOtraEscritura_UsaLaCache()
-        {
-            var manejador = new ManejadorFalso();
-            manejador.Encolar(HttpStatusCode.OK, RespuestaGeocodificacion);
-            var servicio = CrearServicio(manejador);
-
-            await servicio.GeocodificarDireccionAsync("Belgrano, CABA");
-            await servicio.GeocodificarDireccionAsync("  belgrano, caba ");
-
-            Assert.Equal(1, manejador.CantidadPeticiones);
-        }
-
-        [Fact]
-        public async Task GeocodificarDireccionAsync_SinResultados_LanzaRutaNoDisponible()
-        {
-            var manejador = new ManejadorFalso();
-            manejador.Encolar(HttpStatusCode.OK, "{\"status\":\"ZERO_RESULTS\",\"results\":[]}");
-            var servicio = CrearServicio(manejador);
-
-            await Assert.ThrowsAsync<RutaNoDisponibleException>(
-                () => servicio.GeocodificarDireccionAsync("Calle que no existe 123"));
-        }
-
 
         // Handler que devuelve respuestas encoladas en orden y registra lo que recibió.
         private sealed class ManejadorFalso : HttpMessageHandler

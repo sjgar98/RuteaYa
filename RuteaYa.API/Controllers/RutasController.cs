@@ -19,6 +19,9 @@ namespace RuteaYa.API.Controllers
         /// <summary>Calcula distancia, duración y trazado de un recorrido (lo usa el mapa de los viajes).</summary>
         /// <param name="consulta">Puntos del recorrido: origen, paradas intermedias y destino, en orden.</param>
         /// <param name="cancelacion">Cancelación de la petición (la completa el framework).</param>
+        /// <response code="200">Distancia, duración y polyline del recorrido.</response>
+        /// <response code="400">El recorrido es inválido (menos de 2 o más de 25 puntos).</response>
+        /// <response code="503">El servicio de rutas no está disponible.</response>
         [HttpPost("calcular")]
         [ProducesResponseType(typeof(RutaResultadoDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]

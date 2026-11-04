@@ -44,17 +44,6 @@ namespace RuteaYa.API.Servicios.Rutas
                 p => p.CompararConEnvioAsync(recorridoHabitual, retiro, entrega, cancelacion));
         }
 
-        public Task<CoordenadaDto> GeocodificarDireccionAsync(string direccion)
-        {
-            return EjecutarAsync(nameof(GeocodificarDireccionAsync), default, p => p.GeocodificarDireccionAsync(direccion));
-        }
-
-
-        public Task<List<string>> BuscarDireccionesAsync(string texto)
-        {
-            return EjecutarAsync(nameof(BuscarDireccionesAsync), default, p => p.BuscarDireccionesAsync(texto));
-        }
-
         private async Task<T> EjecutarAsync<T>(string operacion, CancellationToken cancelacion, Func<IRutaServicio, Task<T>> accion)
         {
             if (_cache.TryGetValue(ClaveProveedorCaido, out _))

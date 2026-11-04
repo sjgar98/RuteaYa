@@ -162,64 +162,197 @@ namespace RuteaYa.API.Servicios
 
         public async Task<ResultadoAsignacion> AceptarAsync(int usuarioId, int viajeId, int envioId)
         {
+            return await AceptarVariosAsync(usuarioId, viajeId, new List<int> { envioId });
+        }
+
+        public async Task<ResumenSeleccionDto?> ResumirSeleccionAsync(int usuarioId, int viajeId, List<int> envioIds)
+        {
+            var viaje = await ObtenerViajePropioAsync(usuarioId, viajeId);
+            if (viaje == null)
+            {
+                return null;
+            }
+
+            var seleccion = await EvaluarSeleccionAsync(viaje, envioIds, usuarioId);
+            if (seleccion == null)
+            {
+                return null;
+            }
+
+            var envios = seleccion.Items
+                .Select(i => ADtoSeleccion(i, viaje))
+                .ToList();
+
+            return new ResumenSeleccionDto
+            {
+                ViajeId = viaje.Id,
+                OrigenDir = viaje.OrigenDir,
+                DestinoDir = viaje.DestinoDir,
+                MaxPaquetes = viaje.MaxPaquetes,
+                PesoMaxKg = viaje.PesoMaxKg,
+                DesvioMaxKm = viaje.DesvioMaxKm,
+                Seleccion = new CombinacionDto
+                {
+                    Envios = envios,
+                    GananciaTotal = envios.Sum(e => e.MontoPago),
+                    PesoTotalKg = envios.Sum(e => e.PesoKg),
+                    DesvioTotalKm = envios.Sum(e => e.DesvioKm),
+                    CantidadPaquetes = envios.Count
+                },
+                PuedeConfirmar = seleccion.Motivo == null,
+                Motivo = seleccion.Motivo
+            };
+        }
+
+        public async Task<ResultadoAsignacion> AceptarVariosAsync(int usuarioId, int viajeId, List<int> envioIds)
+        {
             var viaje = await ObtenerViajePropioAsync(usuarioId, viajeId);
             if (viaje == null)
             {
                 return ResultadoAsignacion.NoEncontrado();
             }
 
-            var envio = await _envioRepositorio.ObtenerPorIdAsync(envioId);
-            if (envio == null)
+            // Se revalida todo: entre que el conductor vio la selección y la confirmó pudo cambiar algo.
+            var seleccion = await EvaluarSeleccionAsync(viaje, envioIds, usuarioId);
+            if (seleccion == null)
             {
                 return ResultadoAsignacion.NoEncontrado();
             }
 
-            // Se revalida todo: entre que el conductor vio la oportunidad y la aceptó pudo cambiar algo.
-            var evaluacion = await EvaluarInternoAsync(viaje, envio, usuarioId, Hoy(), prefiltrar: false);
-            if (evaluacion.Motivo != null)
+            if (seleccion.Motivo != null)
             {
-                return ResultadoAsignacion.Conflicto(evaluacion.Motivo);
+                return ResultadoAsignacion.Conflicto(seleccion.Motivo);
             }
 
-            if (!EnvioEstadoMaquina.Transicionar(envio, EstadoEnvio.ConductorAsignado))
+            if (!seleccion.Items.All(i => EnvioEstadoMaquina.PuedeTransicionar(i.Envio.Estado, EstadoEnvio.ConductorAsignado)))
             {
                 return ResultadoAsignacion.Conflicto(MotivoNoDisponible);
             }
 
-            var asignacion = new Asignacion
+            var asignaciones = new List<Asignacion>();
+            foreach (var item in seleccion.Items)
             {
-                ViajeId = viaje.Id,
-                EnvioId = envio.Id,
-                FechaViaje = evaluacion.Fecha!.Value,
-                DesvioKm = evaluacion.Ruta!.DesvioKm,
-                TiempoExtraMin = evaluacion.Ruta.TiempoAdicionalMinutos,
-                Ganancia = envio.Monto,
-                AsignadoEn = DateTime.UtcNow,
-                Envio = envio
-            };
+                EnvioEstadoMaquina.Transicionar(item.Envio, EstadoEnvio.ConductorAsignado);
+                asignaciones.Add(new Asignacion
+                {
+                    ViajeId = viaje.Id,
+                    EnvioId = item.Envio.Id,
+                    FechaViaje = item.Evaluacion.Fecha!.Value,
+                    DesvioKm = item.Evaluacion.Ruta!.DesvioKm,
+                    TiempoExtraMin = item.Evaluacion.Ruta.TiempoAdicionalMinutos,
+                    Ganancia = item.Envio.Monto,
+                    AsignadoEn = DateTime.UtcNow,
+                    Envio = item.Envio
+                });
+            }
 
             try
             {
-                // Un solo SaveChanges guarda la asignación y el cambio de estado del envío (con su historial).
-                await _asignacionRepositorio.AgregarAsync(new List<Asignacion> { asignacion });
+                // Un solo SaveChanges guarda todas las asignaciones y los cambios de estado (con su historial).
+                await _asignacionRepositorio.AgregarAsync(asignaciones);
             }
             catch (DbUpdateException ex)
             {
-                // El índice único sobre EnvioId: otro conductor lo tomó al mismo tiempo.
-                _logger.LogInformation(ex, "El envío {EnvioId} ya fue asignado por otro conductor.", envio.Id);
-                return ResultadoAsignacion.Conflicto("Otro conductor acaba de tomar este envío.");
+                // El índice único sobre EnvioId: otro conductor tomó alguno de los envíos al mismo tiempo.
+                _logger.LogInformation(ex, "Alguno de los envíos {EnvioIds} ya fue asignado por otro conductor.", string.Join(",", envioIds));
+                return ResultadoAsignacion.Conflicto(asignaciones.Count == 1
+                    ? "Otro conductor acaba de tomar este envío."
+                    : "Otro conductor acaba de tomar uno de los envíos.");
             }
 
-            return ResultadoAsignacion.Exito(new AsignacionDto
+            return ResultadoAsignacion.Exito(asignaciones.Select(a => new AsignacionDto
             {
-                Id = asignacion.Id,
-                EnvioId = asignacion.EnvioId,
-                ViajeId = asignacion.ViajeId,
-                FechaViaje = asignacion.FechaViaje,
-                DesvioKm = asignacion.DesvioKm,
-                TiempoExtraMin = asignacion.TiempoExtraMin,
-                Ganancia = asignacion.Ganancia
-            });
+                Id = a.Id,
+                EnvioId = a.EnvioId,
+                ViajeId = a.ViajeId,
+                FechaViaje = a.FechaViaje,
+                DesvioKm = a.DesvioKm,
+                TiempoExtraMin = a.TiempoExtraMin,
+                Ganancia = a.Ganancia
+            }).ToList());
+        }
+
+        // null si algún envío no existe. Evalúa cada envío con las mismas reglas que Aceptar y después la
+        // selección completa: entre todos no pueden superar el lugar libre ni el desvío máximo del viaje
+        // (el desvío de la selección es la suma de los desvíos, igual que en el Optimizador).
+        private async Task<EvaluacionSeleccion?> EvaluarSeleccionAsync(Viaje viaje, List<int> envioIds, int usuarioId)
+        {
+            var hoy = Hoy();
+            var seleccion = new EvaluacionSeleccion();
+
+            foreach (var envioId in envioIds.Distinct())
+            {
+                var envio = await _envioRepositorio.ObtenerPorIdAsync(envioId);
+                if (envio == null)
+                {
+                    return null;
+                }
+
+                var evaluacion = await EvaluarInternoAsync(viaje, envio, usuarioId, hoy, prefiltrar: false);
+                seleccion.Items.Add(new ItemSeleccion(envio, evaluacion));
+
+                if (seleccion.Motivo == null && evaluacion.Motivo != null)
+                {
+                    seleccion.Motivo = envioIds.Count == 1
+                        ? evaluacion.Motivo
+                        : $"{envio.OrigenDir} → {envio.DestinoDir}: {evaluacion.Motivo}";
+                }
+            }
+
+            seleccion.Motivo ??= MotivoSeleccionSinLugar(viaje, seleccion.Items);
+            return seleccion;
+        }
+
+        private static string? MotivoSeleccionSinLugar(Viaje viaje, List<ItemSeleccion> items)
+        {
+            var (paquetesLibres, kgLibres) = CapacidadRestante(viaje);
+
+            if (items.Count > paquetesLibres)
+            {
+                return $"La selección tiene {items.Count} paquetes y el viaje tiene lugar para {Math.Max(paquetesLibres, 0)}.";
+            }
+
+            var pesoTotal = items.Sum(i => i.Envio.PesoKg);
+            if (pesoTotal > kgLibres)
+            {
+                return $"La selección suma {pesoTotal:0.##} kg y el viaje tiene lugar para {Math.Max(kgLibres, 0):0.##} kg.";
+            }
+
+            var desvioTotal = items.Sum(i => i.Evaluacion.Ruta?.DesvioKm ?? 0);
+            if (desvioTotal > viaje.DesvioMaxKm)
+            {
+                return $"La selección suma {desvioTotal:0.##} km de desvío y el máximo del viaje es {viaje.DesvioMaxKm:0.##} km.";
+            }
+
+            return null;
+        }
+
+        private static OportunidadDto ADtoSeleccion(ItemSeleccion item, Viaje viaje)
+        {
+            var desvio = item.Evaluacion.Ruta?.DesvioKm ?? 0;
+            var (compatibilidad, puntuacion) = CalcularCompatibilidad(desvio, viaje.DesvioMaxKm);
+
+            return new OportunidadDto
+            {
+                EnvioId = item.Envio.Id,
+                Origen = item.Envio.OrigenDir,
+                Destino = item.Envio.DestinoDir,
+                Descripcion = item.Envio.Descripcion,
+                PesoKg = item.Envio.PesoKg,
+                DesvioKm = desvio,
+                MontoPago = item.Envio.Monto,
+                FechaViaje = item.Evaluacion.Fecha ?? default,
+                Compatibilidad = compatibilidad,
+                PuntuacionCompatibilidad = puntuacion
+            };
+        }
+
+        private record ItemSeleccion(Envio Envio, EvaluacionOportunidad Evaluacion);
+
+        private class EvaluacionSeleccion
+        {
+            public List<ItemSeleccion> Items { get; } = new List<ItemSeleccion>();
+            public string? Motivo { get; set; }
         }
 
         // Expuesto para el Optimizador: evalúa si un envío ya cargado entra en el viaje dado.

@@ -20,6 +20,7 @@ namespace RuteaYa.API.Controllers
         }
 
         /// <summary>Lista los paquetes que el usuario autenticado aceptó transportar.</summary>
+        /// <response code="200">Paquetes asignados a los viajes del usuario, con las acciones de estado disponibles.</response>
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

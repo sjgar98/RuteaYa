@@ -22,6 +22,7 @@ namespace RuteaYa.API.Controllers
 
         /// <summary>Lista los envíos del usuario autenticado.</summary>
         /// <param name="estado">Filtra por estado; sin valor devuelve todos.</param>
+        /// <response code="200">Envíos del usuario, del más nuevo al más viejo.</response>
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]

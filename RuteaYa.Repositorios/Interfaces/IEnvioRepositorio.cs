@@ -8,6 +8,7 @@ namespace RuteaYa.Repositorios.Interfaces
         Task<List<Envio>> ListarPorUsuarioAsync(int usuarioId, EstadoEnvio? estado = null);
         Task<List<Envio>> ListarDisponiblesAsync(DateOnly desde, int usuarioIdExcluido);
         Task<List<Envio>> ListarPorIdsAsync(List<int> ids);
+        Task<List<Envio>> ListarFinalizadosPorUsuarioAsync(int usuarioId);
         Task<Envio?> ObtenerPorIdAsync(int id);
         Task AgregarAsync(Envio envio);
         Task GuardarCambiosAsync();

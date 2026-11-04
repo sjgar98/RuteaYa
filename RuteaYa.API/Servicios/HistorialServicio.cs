@@ -1,76 +1,109 @@
-using RuteaYa.DTOs;
-using RuteaYa.Repositorios.Interfaces;
+using System.Globalization;
 using RuteaYa.API.Servicios.Interfaces;
+using RuteaYa.DTOs;
+using RuteaYa.DTOs.Enums;
+using RuteaYa.Entidades;
+using RuteaYa.Repositorios.Interfaces;
 
 namespace RuteaYa.API.Servicios
 {
     public class HistorialServicio : IHistorialServicio
     {
-        private readonly IAsignacionRepositorio _asignacionRepositorio;
-        private readonly IViajeRepositorio _viajeRepositorio;
+        public const string TipoViaje = "Viaje";
+        public const string TipoEnvio = "Envio";
 
-        public HistorialServicio(IAsignacionRepositorio asignacionRepositorio, IViajeRepositorio viajeRepositorio)
+        private static readonly CultureInfo _cultura = CultureInfo.GetCultureInfo("es-AR");
+        private static readonly TimeSpan _offsetArgentina = TimeSpan.FromHours(-3);
+
+        private readonly IAsignacionRepositorio _asignacionRepositorio;
+        private readonly IEnvioRepositorio _envioRepositorio;
+
+        public HistorialServicio(IAsignacionRepositorio asignacionRepositorio, IEnvioRepositorio envioRepositorio)
         {
             _asignacionRepositorio = asignacionRepositorio;
-            _viajeRepositorio = viajeRepositorio;
+            _envioRepositorio = envioRepositorio;
         }
 
-        public async Task<HistorialDto> ObtenerHistorialAsync(int usuarioId, DateTime? desde, DateTime? hasta, string? orden, string? estado)
+        public async Task<HistorialDto> ObtenerHistorialAsync(int usuarioId, DateOnly? desde, DateOnly? hasta, string? orden, string? estado)
         {
-            var asignacionesList = await _asignacionRepositorio.ListarEntregadasPorConductorAsync(usuarioId, desde, hasta);
-            var totalViajesInactivos = (await _viajeRepositorio.ListarPorUsuarioAsync(usuarioId, false)).Count;
-
-            int viajesRealizadosCount = asignacionesList.Select(a => a.ViajeId).Distinct().Count();
-            int totalViajes = Math.Max(viajesRealizadosCount, totalViajesInactivos);
-            int totalEnvios = asignacionesList.Count;
-            decimal gananciaEfectiva = asignacionesList.Sum(a => a.Ganancia);
+            var entregadas = await _asignacionRepositorio.ListarEntregadasPorConductorAsync(usuarioId, desde, hasta);
+            var filtro = estado?.Trim().ToLowerInvariant();
 
             var items = new List<HistorialItemDto>();
-
-            var gruposPorViaje = asignacionesList.GroupBy(a => a.ViajeId);
-            foreach (var grupo in gruposPorViaje)
+            if (filtro is null or "" or "todos" or "viajes")
             {
-                var viaje = grupo.First().Viaje;
-                var ultimaFecha = grupo.Max(a => a.AsignadoEn);
-                var gananciaTotalViaje = grupo.Sum(a => a.Ganancia);
-                var cantidadPaquetes = grupo.Count();
-
-                string mesStr = ultimaFecha.ToString("MMMM");
-                mesStr = char.ToUpper(mesStr[0]) + mesStr.Substring(1);
-
-                items.Add(new HistorialItemDto
-                {
-                    Id = viaje.Id,
-                    Tipo = "Viaje",
-                    Descripcion = $"{viaje.OrigenDir} → {viaje.DestinoDir}",
-                    Detalle = $"{mesStr} · {cantidadPaquetes} paquetes",
-                    Monto = gananciaTotalViaje,
-                    Fecha = ultimaFecha
-                });
+                items.AddRange(ItemsDeViajes(entregadas));
             }
 
-     
-            if (!string.IsNullOrEmpty(estado))
+            if (filtro is null or "" or "todos" or "entregados" or "cancelados")
             {
-                items = items.Where(i => i.Tipo.Equals(estado, StringComparison.OrdinalIgnoreCase)).ToList();
+                var finalizados = await _envioRepositorio.ListarFinalizadosPorUsuarioAsync(usuarioId);
+                items.AddRange(finalizados
+                    .Where(e => filtro is not "entregados" || e.Estado == EstadoEnvio.Entregado)
+                    .Where(e => filtro is not "cancelados" || e.Estado == EstadoEnvio.Cancelado)
+                    .Select(AItemDeEnvio)
+                    .Where(i => (!desde.HasValue || i.Fecha >= desde.Value) && (!hasta.HasValue || i.Fecha <= hasta.Value)));
             }
-
-
-            items = orden switch
-            {
-                "fecha_asc" => items.OrderBy(i => i.Fecha).ToList(),
-                "fecha_desc" => items.OrderByDescending(i => i.Fecha).ToList(),
-                "monto_asc" => items.OrderBy(i => i.Monto).ToList(),
-                "monto_desc" => items.OrderByDescending(i => i.Monto).ToList(),
-                _ => items.OrderByDescending(i => i.Fecha).ToList()
-            };
 
             return new HistorialDto
             {
-                ViajesRealizados = totalViajes,
-                EnviosTransportados = totalEnvios,
-                GananciaEfectiva = gananciaEfectiva,
-                Items = items
+                ViajesRealizados = entregadas.Select(a => (a.ViajeId, a.FechaViaje)).Distinct().Count(),
+                EnviosTransportados = entregadas.Count,
+                GananciaEfectiva = entregadas.Sum(a => a.Ganancia),
+                Items = Ordenar(items, orden)
+            };
+        }
+
+        // Un ítem por viaje y mes, como en el mockup ("Septiembre · 3 paquetes").
+        private static IEnumerable<HistorialItemDto> ItemsDeViajes(List<Asignacion> entregadas)
+        {
+            return entregadas
+                .GroupBy(a => (a.ViajeId, a.FechaViaje.Year, a.FechaViaje.Month))
+                .Select(grupo =>
+                {
+                    var viaje = grupo.First().Viaje;
+                    var paquetes = grupo.Count();
+                    var mes = _cultura.TextInfo.ToTitleCase(grupo.First().FechaViaje.ToString("MMMM", _cultura));
+
+                    return new HistorialItemDto
+                    {
+                        Id = viaje.Id,
+                        Tipo = TipoViaje,
+                        Descripcion = $"{viaje.OrigenDir} → {viaje.DestinoDir}",
+                        Detalle = $"{mes} · {paquetes} {(paquetes == 1 ? "paquete" : "paquetes")}",
+                        Monto = grupo.Sum(a => a.Ganancia),
+                        Fecha = grupo.Max(a => a.FechaViaje)
+                    };
+                });
+        }
+
+        private static HistorialItemDto AItemDeEnvio(Envio envio)
+        {
+            var cierre = envio.Historial
+                .Where(h => h.EstadoNuevo == envio.Estado)
+                .Select(h => (DateTime?)h.Fecha)
+                .Max() ?? envio.CreadoEn;
+
+            return new HistorialItemDto
+            {
+                Id = envio.Id,
+                Tipo = TipoEnvio,
+                Descripcion = $"{envio.OrigenDir} → {envio.DestinoDir}",
+                Detalle = envio.Descripcion,
+                Monto = envio.Monto,
+                Fecha = DateOnly.FromDateTime(cierre.Add(_offsetArgentina)),
+                Estado = envio.Estado
+            };
+        }
+
+        private static List<HistorialItemDto> Ordenar(List<HistorialItemDto> items, string? orden)
+        {
+            return orden switch
+            {
+                "fecha_asc" => items.OrderBy(i => i.Fecha).ThenBy(i => i.Id).ToList(),
+                "monto_asc" => items.OrderBy(i => i.Monto).ThenByDescending(i => i.Fecha).ToList(),
+                "monto_desc" => items.OrderByDescending(i => i.Monto).ThenByDescending(i => i.Fecha).ToList(),
+                _ => items.OrderByDescending(i => i.Fecha).ThenByDescending(i => i.Id).ToList()
             };
         }
     }

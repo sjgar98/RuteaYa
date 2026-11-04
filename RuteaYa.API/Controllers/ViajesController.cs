@@ -24,6 +24,7 @@ namespace RuteaYa.API.Controllers
 
         /// <summary>Lista los viajes del usuario autenticado.</summary>
         /// <param name="activo">true: activos, false: inactivos, sin valor: todos.</param>
+        /// <response code="200">Viajes del usuario (vacía si no tiene).</response>
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -140,6 +141,8 @@ namespace RuteaYa.API.Controllers
         /// <summary>Busca direcciones que coincidan con el texto (origen, destino o paradas).</summary>
         /// <param name="texto">Texto a buscar, al menos 3 caracteres.</param>
         /// <param name="cancelacion">Cancelación de la petición (la completa el framework).</param>
+        /// <response code="200">Hasta 5 direcciones con sus coordenadas (vacía si no hay coincidencias).</response>
+        /// <response code="400">El texto tiene menos de 3 caracteres.</response>
         [HttpGet("direcciones")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
