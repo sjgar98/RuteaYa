@@ -84,6 +84,11 @@ namespace RuteaYa.API.Servicios.Rutas
 
         private static bool EsFalloDelProveedor(Exception ex, CancellationToken cancelacion)
         {
+            if (ex.Message.Contains("400") || ex.Message.Contains("InvalidUrl"))
+            {
+                return false;
+            }
+
             return ex is RutaNoDisponibleException
                 || ex is JsonException
                 || ex is KeyNotFoundException

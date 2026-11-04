@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using RuteaYa.DTOs.Enums;
 using RuteaYa.Entidades;
 using RuteaYa.Repositorios.Interfaces;
 
@@ -23,6 +24,27 @@ namespace RuteaYa.Repositorios
                 .Where(a => a.Viaje.UsuarioId == conductorId)
                 .OrderByDescending(a => a.FechaViaje)
                 .ToListAsync();
+        }
+
+        public async Task<List<Asignacion>> ListarEntregadasPorConductorAsync(int conductorId, DateTime? desde, DateTime? hasta)
+        {
+            var consulta = _db.Asignaciones
+                .AsNoTracking()
+                .Include(a => a.Envio)
+                .Include(a => a.Viaje)
+                .Where(a => a.Viaje.UsuarioId == conductorId && a.Envio.Estado == EstadoEnvio.Entregado);
+
+            if (desde.HasValue)
+            {
+                consulta = consulta.Where(a => a.AsignadoEn >= desde.Value);
+            }
+
+            if (hasta.HasValue)
+            {
+                consulta = consulta.Where(a => a.AsignadoEn <= hasta.Value);
+            }
+
+            return await consulta.ToListAsync();
         }
 
         public async Task<Asignacion?> ObtenerPorIdAsync(int id)

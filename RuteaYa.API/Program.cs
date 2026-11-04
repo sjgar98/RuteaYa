@@ -18,9 +18,7 @@ using RuteaYa.API.Servicios.Direcciones;
 var builder = WebApplication.CreateBuilder(args);
 
 using var db = new RuteaYaDbContext();
-db.Database.Migrate();
-
-//Esto lo agrege xq no queria tocar cosas de las migraciones en la base de datos)? le tengo respeto 
+db.Database.Migrate(); // Esto lo agregué porque no quería tocar cosas de las migraciones en la base de datos (¡le tengo respeto!)
 //await InicializadorDatos.InicializarAsync(db);
 
 // Add services to the container.
@@ -53,6 +51,7 @@ builder.Services.AddScoped<IUsuarioServicio, UsuarioServicio>();
 builder.Services.AddScoped<ITokenServicio, TokenServicio>();
 builder.Services.AddScoped<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 builder.Services.AddMemoryCache();
+
 builder.Services.Configure<RutasOpciones>(builder.Configuration.GetSection("Rutas"));
 builder.Services.AddScoped<RutaServicioMock>();
 builder.Services.AddHttpClient<RutaServicioGoogle>(cliente => cliente.Timeout = TimeSpan.FromSeconds(10));
@@ -128,6 +127,9 @@ builder.Services.AddScoped<ITransporteServicio, TransporteServicio>();
 builder.Services.AddScoped<IOportunidadesServicio, OportunidadesServicio>();
 builder.Services.AddScoped<IOptimizadorServicio, OptimizadorServicio>();
 builder.Services.AddScoped<IDashboardServicio, DashboardServicio>();
+
+// Registro del servicio para la Pantalla 14 (Potencial Mensual)
+builder.Services.AddScoped<IPotencialServicio, PotencialServicio>();
 
 builder.Services.AddDbContext<RuteaYaDbContext>();
 

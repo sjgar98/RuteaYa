@@ -39,6 +39,7 @@ builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
 });
+
 builder.Services.AddHttpClient<IHistorialServicio, HistorialServicio>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["ApiUrl"]!);
@@ -53,6 +54,9 @@ builder.Services.AddHttpClient<IOportunidadesServicio, OportunidadesServicio>(c 
 builder.Services.AddHttpClient<IOptimizadorServicio, OptimizadorServicio>(c => c.BaseAddress = apiUrl)
     .AddHttpMessageHandler<TokenHandler>();
 
+
+builder.Services.AddHttpClient<IPotencialServicio, PotencialServicio>(c => c.BaseAddress = apiUrl)
+    .AddHttpMessageHandler<TokenHandler>();
 builder.Services.AddHttpClient<IDashboardServicio, DashboardServicio>(c => c.BaseAddress = apiUrl)
     .AddHttpMessageHandler<TokenHandler>();
 

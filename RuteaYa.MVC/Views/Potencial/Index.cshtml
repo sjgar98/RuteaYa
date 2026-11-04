@@ -1,0 +1,149 @@
+@model RuteaYa.DTOs.PotencialMensualDto
+@{
+    ViewData["Title"] = "Potencial de ganancias mensual";
+    var mesActual = ViewData["MesActual"]?.ToString() ?? Model.Mes;
+    var criterioActual = ViewData["CriterioActual"]?.ToString() ?? "ganancia";
+    var criterios = new[]
+    {
+        ("ganancia", "Maximizar ganancias"),
+        ("desvio", "Minimizar desvíos"),
+        ("equilibrio", "Equilibrio")
+    };
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h2 class="fw-bold mb-1 fs-3">Potencial de ganancias mensual</h2>
+            <p class="text-muted mb-0 small">Estimación con tus viajes activos y los envíos disponibles hoy. No es ganancia efectiva: lo cobrado está en <a asp-controller="Historial" asp-action="Index">Historial</a>.</p>
+        </div>
+
+        <form method="get" asp-controller="Potencial" asp-action="Index" id="formFiltro" class="row g-2 align-items-center">
+            <div class="col-auto">
+                <input type="month" id="mes" name="mes" value="@mesActual" class="form-control form-control-sm" onchange="this.form.submit()" />
+            </div>
+            <input type="hidden" name="criterio" value="@criterioActual" />
+        </form>
+    </div>
+
+    @if (ViewData["Error"] is string error)
+    {
+        <div class="alert alert-danger">@error</div>
+    }
+
+    <div class="mb-4 d-flex flex-wrap align-items-center gap-2">
+        <span class="text-muted small fw-semibold">Criterio de optimización:</span>
+        @foreach (var (valor, texto) in criterios)
+        {
+            <a asp-action="Index" asp-route-mes="@mesActual" asp-route-criterio="@valor"
+               class="btn btn-sm rounded-pill px-3 @(criterioActual == valor ? "btn-dark" : "btn-outline-secondary")">@texto</a>
+        }
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md">
+            <div class="card border-0 shadow-sm rounded-4 p-3 h-100 bg-success-subtle text-success-emphasis">
+                <span class="small text-uppercase fw-bold">Ganancia potencial</span>
+                <h4 class="fw-bold fs-4 mb-0 mt-1">@Model.GananciaPotencial.Moneda()</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md">
+            <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
+                <span class="small text-uppercase text-muted fw-bold">Viajes analizados</span>
+                <h4 class="fw-bold fs-4 mb-0 mt-1">@Model.ViajesAnalizados</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md">
+            <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
+                <span class="small text-uppercase text-muted fw-bold">Paquetes posibles</span>
+                <h4 class="fw-bold fs-4 mb-0 mt-1">@Model.PaquetesPosibles</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md">
+            <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
+                <span class="small text-uppercase text-muted fw-bold">Promedio por viaje</span>
+                <h4 class="fw-bold fs-4 mb-0 mt-1">@Model.PromedioPorViaje.Moneda()</h4>
+            </div>
+        </div>
+        <div class="col-12 col-md">
+            <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
+                <span class="small text-uppercase text-muted fw-bold">Ganancia por semana</span>
+                <h4 class="fw-bold fs-4 mb-0 mt-1">@Model.GananciaPorSemana.Moneda()</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <h5 class="fw-bold mb-3">Mejor recorrido estimado</h5>
+        @if (Model.MejorRecorrido.Any())
+        {
+            <div class="table-responsive">
+                <table class="table align-middle table-hover small mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Viaje</th>
+                            <th>Salidas en el mes</th>
+                            <th>Primera fecha</th>
+                            <th>Paquetes</th>
+                            <th>Peso total</th>
+                            <th>Desvío total</th>
+                            <th class="text-end">Ganancia estimada</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.MejorRecorrido)
+                        {
+                            <tr>
+                                <td class="fw-semibold"><a asp-controller="Viajes" asp-action="Detalle" asp-route-id="@item.ViajeId" class="text-reset">@item.OrigenDestino</a></td>
+                                <td>@item.SalidasEnPeriodo</td>
+                                <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
+                                <td>@item.PaquetesAsignados</td>
+                                <td>@item.PesoTotalKg.Numero() kg</td>
+                                <td>@item.DesvioTotalKm.Numero() km</td>
+                                <td class="text-end fw-bold text-success">@item.GananciaEstimada.Moneda()</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5 text-muted">
+                <p class="mb-0 small">No hay envíos compatibles con tus viajes activos para este mes.</p>
+            </div>
+        }
+    </div>
+
+    @if (Model.DetalleAsignaciones.Any())
+    {
+        <div class="card border-0 shadow-sm rounded-4 p-4">
+            <h5 class="fw-bold mb-3">Envíos considerados</h5>
+            <div class="table-responsive">
+                <table class="table align-middle table-hover small mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Envío</th>
+                            <th>Recorrido del envío</th>
+                            <th>Viaje</th>
+                            <th class="text-end">Pago</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var envio in Model.DetalleAsignaciones)
+                        {
+                            <tr>
+                                <td>@envio.FechaViaje.ToString("dd/MM/yyyy")</td>
+                                <td>@envio.Descripcion</td>
+                                <td>@envio.OrigenDestinoEnvio</td>
+                                <td>@envio.ViajeAsociado</td>
+                                <td class="text-end">@envio.Monto.Moneda()</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>

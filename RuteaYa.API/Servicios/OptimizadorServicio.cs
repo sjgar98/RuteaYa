@@ -39,22 +39,38 @@ namespace RuteaYa.API.Servicios
                 return null;
             }
 
+            return await OptimizarViajeAsync(viaje, usuarioId, criterio, Hoy(), DateOnly.MaxValue, new HashSet<int>());
+        }
+
+        public async Task<OptimizacionResultadoDto> OptimizarViajeAsync(
+            Viaje viaje,
+            int usuarioId,
+            string? criterio,
+            DateOnly desde,
+            DateOnly hasta,
+            IReadOnlySet<int> enviosExcluidos)
+        {
             var criterioNorm = NormalizarCriterio(criterio);
-            var hoy = Hoy();
+            var hoy = desde;
 
             // La combinación tiene que entrar en el lugar que le queda al viaje (descontando lo ya aceptado).
             var (paquetesLibres, kgLibres) = OportunidadesServicio.CapacidadRestante(viaje);
 
             // Candidatos: envíos disponibles de otros usuarios.
-            var enviosDisponibles = await _envioRepositorio.ListarDisponiblesAsync(hoy, usuarioId);
+            var enviosDisponibles = await _envioRepositorio.ListarDisponiblesAsync(desde, usuarioId);
 
             // Evaluar cada candidato con el mismo motor de Oportunidades para no duplicar reglas.
             var candidatos = new List<CandidatoInterno>();
             var descartados = new List<EnvioDescartadoDto>();
 
-            foreach (var envio in enviosDisponibles)
+            foreach (var envio in enviosDisponibles.Where(e => !enviosExcluidos.Contains(e.Id)))
             {
-                var evaluacion = await _oportunidades.EvaluarCompatibilidadAsync(viaje, envio, usuarioId, hoy);
+                var evaluacion = await _oportunidades.EvaluarCompatibilidadAsync(viaje, envio, usuarioId, desde);
+                if (evaluacion.EsCompatible && evaluacion.Fecha > hasta)
+                {
+                    evaluacion.ConMotivo("Sin salida del viaje en el período");
+                }
+
                 if (!evaluacion.EsCompatible)
                 {
                     descartados.Add(new EnvioDescartadoDto
