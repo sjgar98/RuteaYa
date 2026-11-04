@@ -118,14 +118,15 @@
                         {
                             <li class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 border-bottom">
                                 <div>
-                                    <div class="fw-semibold">@paquete.Descripcion</div>
+                                    <div class="fw-semibold">@paquete.Origen → @paquete.Destino</div>
                                     <div class="text-muted small">
-                                        @paquete.Estado.Texto() · Fecha límite @paquete.FechaLimite.ToString("dd/MM/yyyy")
+                                        @paquete.Descripcion · @paquete.PesoKg.Numero() kg · Viaje del @paquete.FechaViaje.ToString("dd/MM/yyyy")
                                     </div>
+                                    <span class="badge rounded-pill @paquete.Estado.ClaseBadge() mt-1">@paquete.Estado.Texto()</span>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="fw-semibold">@paquete.Ganancia.Moneda()</span>
-                                    <a class="btn btn-outline-secondary btn-sm" asp-controller="Envios" asp-action="Detalle" asp-route-id="@paquete.EnvioId">Ver paquete</a>
+                                    <a class="btn btn-outline-secondary btn-sm" asp-controller="Transportes" asp-action="Index">Ver en Mis transportes</a>
                                 </div>
                             </li>
                         }

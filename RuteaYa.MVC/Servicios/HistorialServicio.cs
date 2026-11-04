@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using RuteaYa.DTOs;
 using RuteaYa.MVC.Servicios.Interfaces;
@@ -6,22 +7,44 @@ namespace RuteaYa.MVC.Servicios
 {
     public class HistorialServicio : IHistorialServicio
     {
-        readonly HttpClient _httpClient;
+        private readonly HttpClient _http;
 
-        public HistorialServicio(HttpClient httpClient)
+        public HistorialServicio(HttpClient http)
         {
-            _httpClient = httpClient;
+            _http = http;
         }
 
-        public async Task<HistorialDto?> ObtenerHistorialAsync(DateTime? desde, DateTime? hasta, string? orden, string? estado)
+        public async Task<HistorialDto?> ObtenerHistorialAsync(DateOnly? desde, DateOnly? hasta, string? orden, string? estado)
         {
-            var url = "api/historial?";
-            if (desde.HasValue) url += $"desde={desde.Value:yyyy-MM-dd}&";
-            if (hasta.HasValue) url += $"hasta={hasta.Value:yyyy-MM-dd}&";
-            if (!string.IsNullOrEmpty(orden)) url += $"orden={orden}&";
-            if (!string.IsNullOrEmpty(estado)) url += $"estado={estado}&";
+            var parametros = new List<string>();
+            if (desde.HasValue)
+            {
+                parametros.Add($"desde={desde.Value:yyyy-MM-dd}");
+            }
 
-            return await _httpClient.GetFromJsonAsync<HistorialDto>(url);
+            if (hasta.HasValue)
+            {
+                parametros.Add($"hasta={hasta.Value:yyyy-MM-dd}");
+            }
+
+            if (!string.IsNullOrEmpty(orden))
+            {
+                parametros.Add($"orden={Uri.EscapeDataString(orden)}");
+            }
+
+            if (!string.IsNullOrEmpty(estado))
+            {
+                parametros.Add($"estado={Uri.EscapeDataString(estado)}");
+            }
+
+            var respuesta = await _http.GetAsync($"api/historial?{string.Join("&", parametros)}");
+            if (respuesta.StatusCode == HttpStatusCode.BadRequest)
+            {
+                return null;
+            }
+
+            respuesta.EnsureSuccessStatusCode();
+            return await respuesta.Content.ReadFromJsonAsync<HistorialDto>();
         }
     }
 }

@@ -143,8 +143,6 @@ namespace RuteaYa.Tests
                 return AlComparar!();
             }
 
-            public Task<CoordenadaDto> GeocodificarDireccionAsync(string direccion) => throw new NotImplementedException();
-            public Task<List<string>> BuscarDireccionesAsync(string texto) => throw new NotImplementedException();
         }
 
         

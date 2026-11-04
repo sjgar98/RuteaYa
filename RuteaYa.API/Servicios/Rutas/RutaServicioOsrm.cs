@@ -96,17 +96,6 @@ namespace RuteaYa.API.Servicios.Rutas
             return ComparadorRutas.CompararAsync(CalcularRutaAsync, recorridoHabitual, retiro, entrega, cancelacion);
         }
 
-        // OSRM no geocodifica: las direcciones se buscan con IDireccionServicio.
-        public Task<CoordenadaDto> GeocodificarDireccionAsync(string direccion)
-        {
-            throw new NotSupportedException("OSRM no geocodifica: usar IDireccionServicio.");
-        }
-
-        public Task<List<string>> BuscarDireccionesAsync(string texto)
-        {
-            throw new NotSupportedException("OSRM no busca direcciones: usar IDireccionServicio.");
-        }
-
         private static RutaResultadoDto LeerRuta(string contenido)
         {
             try

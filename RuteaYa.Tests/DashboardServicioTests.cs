@@ -224,6 +224,8 @@ namespace RuteaYa.Tests
 
             public Task<DetalleOportunidadDto?> ObtenerDetalleAsync(int usuarioId, int viajeId, int envioId) => throw new NotImplementedException();
             public Task<ResultadoAsignacion> AceptarAsync(int usuarioId, int viajeId, int envioId) => throw new NotImplementedException();
+            public Task<ResumenSeleccionDto?> ResumirSeleccionAsync(int usuarioId, int viajeId, List<int> envioIds) => throw new NotImplementedException();
+            public Task<ResultadoAsignacion> AceptarVariosAsync(int usuarioId, int viajeId, List<int> envioIds) => throw new NotImplementedException();
             public Task<EvaluacionOportunidad> EvaluarCompatibilidadAsync(Viaje viaje, Envio envio, int usuarioId, DateOnly hoy) => throw new NotImplementedException();
         }
 

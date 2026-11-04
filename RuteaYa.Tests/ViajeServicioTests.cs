@@ -35,7 +35,7 @@ namespace RuteaYa.Tests
         }
 
         [Fact]
-        public async Task ObtenerDetalleAsync_ViajePropio_DevuelveDatosParadasEnOrdenYPaquetes()
+        public async Task ObtenerDetalleAsync_ViajePropio_DevuelveDatosYParadasEnOrden()
         {
             var repositorio = new ViajeRepositorioFalso();
             repositorio.Viajes.Add(CrearViaje(id: 5, usuarioId: UsuarioId));
@@ -53,7 +53,53 @@ namespace RuteaYa.Tests
             Assert.Equal(5m, detalle.DesvioMaxKm);
             Assert.True(detalle.Activo);
             Assert.Equal(new[] { "Caballito, CABA", "Barracas, CABA" }, detalle.Paradas.Select(p => p.Direccion));
-            Assert.Single(detalle.PaquetesAsignados);
+            Assert.Empty(detalle.PaquetesAsignados);
+        }
+
+        [Fact]
+        public async Task ObtenerDetalleAsync_ConAsignaciones_DevuelveLosPaquetesOrdenadosPorFechaDelViaje()
+        {
+            var repositorio = new ViajeRepositorioFalso();
+            var viaje = CrearViaje(id: 5, usuarioId: UsuarioId);
+            viaje.Asignaciones.Add(CrearAsignacion(envioId: 8, new DateOnly(2026, 11, 13), EstadoEnvio.ConductorAsignado, "Caballito, CABA", 3500m));
+            viaje.Asignaciones.Add(CrearAsignacion(envioId: 7, new DateOnly(2026, 11, 9), EstadoEnvio.Entregado, "Recoleta, CABA", 5500m));
+            viaje.Asignaciones.Add(CrearAsignacion(envioId: 6, new DateOnly(2026, 11, 13), EstadoEnvio.Retirado, "Morón, Buenos Aires", 2500m));
+            repositorio.Viajes.Add(viaje);
+            var servicio = new ViajeServicio(repositorio, new RutaServicioFalso());
+
+            var detalle = await servicio.ObtenerDetalleAsync(UsuarioId, 5);
+
+            Assert.Equal(new[] { 7, 6, 8 }, detalle!.PaquetesAsignados.Select(p => p.EnvioId));
+            var primero = detalle.PaquetesAsignados[0];
+            Assert.Equal("Recoleta, CABA", primero.Origen);
+            Assert.Equal("Lomas de Zamora, Buenos Aires", primero.Destino);
+            Assert.Equal("Paquete 7", primero.Descripcion);
+            Assert.Equal(EstadoEnvio.Entregado, primero.Estado);
+            Assert.Equal(new DateOnly(2026, 11, 9), primero.FechaViaje);
+            Assert.Equal(new DateOnly(2026, 11, 30), primero.FechaLimite);
+            Assert.Equal(2m, primero.PesoKg);
+            Assert.Equal(5500m, primero.Ganancia);
+        }
+
+        private static Asignacion CrearAsignacion(int envioId, DateOnly fechaViaje, EstadoEnvio estado, string origen, decimal ganancia)
+        {
+            return new Asignacion
+            {
+                EnvioId = envioId,
+                FechaViaje = fechaViaje,
+                Ganancia = ganancia,
+                Envio = new Envio
+                {
+                    Id = envioId,
+                    OrigenDir = origen,
+                    DestinoDir = "Lomas de Zamora, Buenos Aires",
+                    Descripcion = $"Paquete {envioId}",
+                    Estado = estado,
+                    FechaLimite = new DateOnly(2026, 11, 30),
+                    PesoKg = 2m,
+                    Monto = ganancia
+                }
+            };
         }
 
         [Fact]
@@ -301,6 +347,43 @@ namespace RuteaYa.Tests
             Assert.Equal(RecorridoEsperadoEdicion, recorrido.Select(c => (c.Latitud, c.Longitud)).ToArray());
         }
 
+        [Fact]
+        public async Task CrearAsync_GuardaElViajeActivoDelUsuarioConDiasSinRepetirYParadasEnOrden()
+        {
+            var repositorio = new ViajeRepositorioFalso();
+            var servicio = new ViajeServicio(repositorio, new RutaServicioFalso());
+
+            await servicio.CrearAsync(UsuarioId, CrearDtoEdicion());
+
+            var viaje = Assert.Single(repositorio.Viajes);
+            Assert.Equal(UsuarioId, viaje.UsuarioId);
+            Assert.True(viaje.Activo);
+            Assert.Equal("Palermo, CABA", viaje.OrigenDir);
+            Assert.Equal(new[] { DiaSemana.Viernes, DiaSemana.Lunes }, viaje.Dias.Select(d => d.DiaSemana));
+            Assert.Equal(new[] { (1, "Recoleta, CABA"), (2, "Belgrano, CABA") }, viaje.Paradas.Select(p => (p.Orden, p.Direccion)));
+            Assert.Equal(new TimeOnly(18, 30), viaje.HoraSalida);
+            Assert.Equal(new TimeOnly(19, 20), viaje.HoraLlegada);
+        }
+
+        [Theory]
+        [InlineData(null, new[] { 1, 2 })]
+        [InlineData(true, new[] { 1 })]
+        [InlineData(false, new[] { 2 })]
+        public async Task ListarPorUsuarioAsync_FiltraPorActivoYSoloDevuelveLosDelUsuario(bool? activo, int[] idsEsperados)
+        {
+            var repositorio = new ViajeRepositorioFalso();
+            repositorio.Viajes.Add(CrearViaje(id: 1, usuarioId: UsuarioId));
+            var inactivo = CrearViaje(id: 2, usuarioId: UsuarioId);
+            inactivo.Activo = false;
+            repositorio.Viajes.Add(inactivo);
+            repositorio.Viajes.Add(CrearViaje(id: 3, usuarioId: 99));
+            var servicio = new ViajeServicio(repositorio, new RutaServicioFalso());
+
+            var viajes = await servicio.ListarPorUsuarioAsync(UsuarioId, activo);
+
+            Assert.Equal(idsEsperados, viajes.Select(v => v.Id).OrderBy(id => id));
+        }
+
         // Recorrido de CrearDtoEdicion: origen, paradas en orden y destino, sin espacios sobrantes.
         private static readonly (decimal, decimal)[] RecorridoEsperadoEdicion =
         {
@@ -375,30 +458,7 @@ namespace RuteaYa.Tests
             public const decimal DistanciaKm = 18.4m;
             public const int DuracionMinutos = 55;
 
-            //public List<List<string>> Recorridos { get; } = new List<List<string>>();
             public List<List<CoordenadaDto>> Recorridos { get; } = new List<List<CoordenadaDto>>();
-
-            //public Task<RutaResultadoDto> CalcularRutaConParadasAsync(List<string> paradas)
-            //{
-            //    Recorridos.Add(paradas.ToList());
-            //    return Task.FromResult(new RutaResultadoDto { DistanciaKm = DistanciaKm, DuracionMinutos = DuracionMinutos });
-            //}
-
-            public Task<RutaResultadoDto> CalcularRutaConParadasAsync(List<string> paradas) => throw new NotImplementedException();
-
-            public Task<CoordenadaDto> GeocodificarDireccionAsync(string direccion) => throw new NotImplementedException();
-
-            public Task<RutaResultadoDto> CalcularRutaAlternativaEnvioAsync(string origen, string destino, string retiroPaquete, string entregaPaquete)
-                => throw new NotImplementedException();
-
-            public Task<decimal> CalcularDesvioAsync(string rutaOriginalId, string paradaExtra) => throw new NotImplementedException();
-
-            public Task<DetalleOportunidadRutaDto> ObtenerDetalleOportunidadAsync(string origenHabitual, string destinoHabitual, string retiroEnvio, string entregaEnvio)
-                => throw new NotImplementedException();
-
-            public Task<List<string>> BuscarDireccionesAsync(string texto) => throw new NotImplementedException();
-
-            
 
             public Task<RutaResultadoDto> CalcularRutaAsync(IReadOnlyList<CoordenadaDto> recorrido, CancellationToken cancelacion = default)
             {

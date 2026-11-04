@@ -15,32 +15,27 @@ namespace RuteaYa.API.Servicios.Rutas
         }
     }
 
-    /// <summary>Implementación real con Google Routes API y Geocoding API (REST).</summary>
+    /// <summary>Implementación real con Google Routes API (REST).</summary>
     public class RutaServicioGoogle : IRutaServicio
     {
         private const string UrlRutas = "https://routes.googleapis.com/directions/v2:computeRoutes";
-        private const string UrlGeocodificacion = "https://maps.googleapis.com/maps/api/geocode/json";
 
         private static readonly TimeSpan VidaRuta = TimeSpan.FromHours(24);
-        private static readonly TimeSpan VidaGeocodificacion = TimeSpan.FromDays(7);
 
         private readonly HttpClient _http;
         private readonly IMemoryCache _cache;
         private readonly RutasOpciones _opciones;
-        private readonly RutaServicioMock _mock;
         private readonly ILogger<RutaServicioGoogle> _logger;
 
         public RutaServicioGoogle(
             HttpClient http,
             IMemoryCache cache,
             IOptions<RutasOpciones> opciones,
-            RutaServicioMock mock,
             ILogger<RutaServicioGoogle> logger)
         {
             _http = http;
             _cache = cache;
             _opciones = opciones.Value;
-            _mock = mock;
             _logger = logger;
         }
 
@@ -121,45 +116,6 @@ namespace RuteaYa.API.Servicios.Rutas
             CancellationToken cancelacion = default)
         {
             return ComparadorRutas.CompararAsync(CalcularRutaAsync, recorridoHabitual, retiro, entrega, cancelacion);
-        }
-
-        public async Task<CoordenadaDto> GeocodificarDireccionAsync(string direccion)
-        {
-            string clave = "geo:" + direccion.Trim().ToLowerInvariant();
-            if (_cache.TryGetValue(clave, out CoordenadaDto? guardada) && guardada != null)
-            {
-                return guardada;
-            }
-
-            string url = $"{UrlGeocodificacion}?address={Uri.EscapeDataString(direccion)}"
-                + $"&components=country:AR&key={Uri.EscapeDataString(_opciones.GoogleApiKey)}";
-
-            using var respuesta = await _http.GetAsync(url);
-            if (!respuesta.IsSuccessStatusCode)
-            {
-                throw new RutaNoDisponibleException($"Google Geocoding respondió {(int)respuesta.StatusCode}.");
-            }
-
-            using var documento = JsonDocument.Parse(await respuesta.Content.ReadAsStringAsync());
-            string estado = documento.RootElement.GetProperty("status").GetString() ?? string.Empty;
-            if (estado != "OK")
-            {
-                throw new RutaNoDisponibleException($"No se pudo geocodificar \"{direccion}\" (estado {estado}).");
-            }
-
-            var ubicacion = documento.RootElement.GetProperty("results")[0].GetProperty("geometry").GetProperty("location");
-            var coordenada = new CoordenadaDto(ubicacion.GetProperty("lat").GetDecimal(), ubicacion.GetProperty("lng").GetDecimal());
-
-            _cache.Set(clave, coordenada, VidaGeocodificacion);
-            return coordenada;
-        }
-
-        // --- Métodos de texto (legado): geocodifican y delegan en los de coordenadas. ---
-
-        public Task<List<string>> BuscarDireccionesAsync(string texto)
-        {
-            // TODO Servicio de mapas: Places Autocomplete. Por ahora, la lista fija del mock.
-            return _mock.BuscarDireccionesAsync(texto);
         }
 
         private static object Waypoint(CoordenadaDto c)

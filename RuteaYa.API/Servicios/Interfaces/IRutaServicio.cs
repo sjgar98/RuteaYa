@@ -6,7 +6,6 @@ namespace RuteaYa.API.Servicios.Interfaces
 {
     public interface IRutaServicio
     {
-
         /// <summary>Ruta por el recorrido completo en orden: origen, paradas, destino.</summary>
         Task<RutaResultadoDto> CalcularRutaAsync(IReadOnlyList<CoordenadaDto> recorrido, CancellationToken cancelacion = default);
 
@@ -17,9 +16,5 @@ namespace RuteaYa.API.Servicios.Interfaces
         /// </summary>
         Task<DetalleOportunidadRutaDto> CompararConEnvioAsync(
             IReadOnlyList<CoordenadaDto> recorridoHabitual, CoordenadaDto retiro, CoordenadaDto entrega, CancellationToken cancelacion = default);
-
-        Task<CoordenadaDto> GeocodificarDireccionAsync(string direccion);
-
-        Task<List<string>> BuscarDireccionesAsync(string texto);
     }
 }

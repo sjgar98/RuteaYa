@@ -4,6 +4,7 @@ namespace RuteaYa.MVC.Servicios.Interfaces
 {
     public interface IHistorialServicio
     {
-        Task<HistorialDto?> ObtenerHistorialAsync(DateTime? desde, DateTime? hasta, string? orden,string? estado);
+        // null si la API rechaza los filtros (400: desde posterior a hasta).
+        Task<HistorialDto?> ObtenerHistorialAsync(DateOnly? desde, DateOnly? hasta, string? orden, string? estado);
     }
 }

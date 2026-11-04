@@ -202,12 +202,5 @@ namespace RuteaYa.Tests
             Assert.Equal(3, manejador.CantidadPeticiones);
             Assert.Equal(1.0m, segundo.DesvioKm);
         }
-
-        [Fact]
-        public async Task GeocodificarDireccionAsync_NoEstaSoportado()
-        {
-            await Assert.ThrowsAsync<NotSupportedException>(
-                () => CrearServicio(new ManejadorHttpFalso()).GeocodificarDireccionAsync("Belgrano"));
-        }
     }
 }

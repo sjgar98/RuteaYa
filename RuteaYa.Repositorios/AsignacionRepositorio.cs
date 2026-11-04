@@ -26,7 +26,7 @@ namespace RuteaYa.Repositorios
                 .ToListAsync();
         }
 
-        public async Task<List<Asignacion>> ListarEntregadasPorConductorAsync(int conductorId, DateTime? desde, DateTime? hasta)
+        public async Task<List<Asignacion>> ListarEntregadasPorConductorAsync(int conductorId, DateOnly? desde, DateOnly? hasta)
         {
             var consulta = _db.Asignaciones
                 .AsNoTracking()
@@ -36,12 +36,12 @@ namespace RuteaYa.Repositorios
 
             if (desde.HasValue)
             {
-                consulta = consulta.Where(a => a.AsignadoEn >= desde.Value);
+                consulta = consulta.Where(a => a.FechaViaje >= desde.Value);
             }
 
             if (hasta.HasValue)
             {
-                consulta = consulta.Where(a => a.AsignadoEn <= hasta.Value);
+                consulta = consulta.Where(a => a.FechaViaje <= hasta.Value);
             }
 
             return await consulta.ToListAsync();

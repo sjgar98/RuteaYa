@@ -517,6 +517,212 @@ namespace RuteaYa.Tests
             Assert.Contains("Otro conductor", resultado.Mensaje);
         }
 
+        // ---------- Selección de varios envíos (Pantalla 11) ----------
+
+        private void AgregarEjemploSeccion12()
+        {
+            _viajes.Viajes.Add(CrearViaje());
+            _envios.Envios.Add(CrearEnvio(1, monto: 4000m, pesoKg: 2m));
+            _envios.Envios.Add(CrearEnvio(2, monto: 5500m, pesoKg: 6m));
+            _envios.Envios.Add(CrearEnvio(3, monto: 3500m, pesoKg: 4m));
+            _envios.Envios.Add(CrearEnvio(4, monto: 7000m, pesoKg: 8m));
+            _envios.Envios.Add(CrearEnvio(5, monto: 2500m, pesoKg: 1m));
+            _rutas.Desvios[1] = 1m;
+            _rutas.Desvios[2] = 2m;
+            _rutas.Desvios[3] = 1m;
+            _rutas.Desvios[4] = 3m;
+            _rutas.Desvios[5] = 0.5m;
+        }
+
+        [Fact]
+        public async Task ResumirSeleccionAsync_EjemploSeccion12_DevuelveLosTotalesDeLaSeleccion()
+        {
+            AgregarEjemploSeccion12();
+
+            var resumen = await CrearServicio().ResumirSeleccionAsync(ConductorId, ViajeId, new List<int> { 1, 2, 5 });
+
+            Assert.NotNull(resumen);
+            Assert.True(resumen!.PuedeConfirmar);
+            Assert.Null(resumen.Motivo);
+            Assert.Equal(12000m, resumen.Seleccion.GananciaTotal);
+            Assert.Equal(9m, resumen.Seleccion.PesoTotalKg);
+            Assert.Equal(3.5m, resumen.Seleccion.DesvioTotalKm);
+            Assert.Equal(3, resumen.Seleccion.CantidadPaquetes);
+            Assert.Equal(new[] { 1, 2, 5 }, resumen.Seleccion.Envios.Select(e => e.EnvioId));
+            Assert.All(resumen.Seleccion.Envios, e => Assert.Equal(Hoy, e.FechaViaje));
+            Assert.Empty(_asignaciones.Agregadas);
+        }
+
+        [Fact]
+        public async Task ResumirSeleccionAsync_ViajeDeOtroUsuario_DevuelveNull()
+        {
+            _viajes.Viajes.Add(CrearViaje(usuarioId: 99));
+            _envios.Envios.Add(CrearEnvio(1));
+
+            var resumen = await CrearServicio().ResumirSeleccionAsync(ConductorId, ViajeId, new List<int> { 1 });
+
+            Assert.Null(resumen);
+        }
+
+        [Fact]
+        public async Task ResumirSeleccionAsync_EnvioInexistente_DevuelveNull()
+        {
+            _viajes.Viajes.Add(CrearViaje());
+            _envios.Envios.Add(CrearEnvio(1));
+
+            var resumen = await CrearServicio().ResumirSeleccionAsync(ConductorId, ViajeId, new List<int> { 1, 999 });
+
+            Assert.Null(resumen);
+        }
+
+        [Theory]
+        [InlineData(EstadoEnvio.ConductorAsignado)]
+        [InlineData(EstadoEnvio.Cancelado)]
+        public async Task ResumirSeleccionAsync_EnvioQueYaNoEstaDisponible_NoSePuedeConfirmar(EstadoEnvio estado)
+        {
+            _viajes.Viajes.Add(CrearViaje());
+            _envios.Envios.Add(CrearEnvio(1));
+            _envios.Envios.Add(CrearEnvio(2, estado: estado));
+
+            var resumen = await CrearServicio().ResumirSeleccionAsync(ConductorId, ViajeId, new List<int> { 1, 2 });
+
+            Assert.False(resumen!.PuedeConfirmar);
+            Assert.Contains("Retiro 2", resumen.Motivo);
+            Assert.Contains("ya no está disponible", resumen.Motivo);
+        }
+
+        [Fact]
+        public async Task ResumirSeleccionAsync_SuperaLaCantidadDePaquetes_NoSePuedeConfirmar()
+        {
+            AgregarEjemploSeccion12();
+            _viajes.Viajes[0].MaxPaquetes = 2;
+
+            var resumen = await CrearServicio().ResumirSeleccionAsync(ConductorId, ViajeId, new List<int> { 1, 2, 5 });
+
+            Assert.False(resumen!.PuedeConfirmar);
+            Assert.Contains("3 paquetes", resumen.Motivo);
+        }
+
+        [Fact]
+        public async Task ResumirSeleccionAsync_SuperaElPesoEntreTodos_NoSePuedeConfirmar()
+        {
+            AgregarEjemploSeccion12();
+
+            var resumen = await CrearServicio().ResumirSeleccionAsync(ConductorId, ViajeId, new List<int> { 1, 2, 4 });
+
+            Assert.False(resumen!.PuedeConfirmar);
+            Assert.Contains("16 kg", resumen.Motivo);
+        }
+
+        [Fact]
+        public async Task ResumirSeleccionAsync_PesoContandoLosYaAceptados_NoSePuedeConfirmar()
+        {
+            AgregarEjemploSeccion12();
+            var aceptado = CrearEnvio(6, estado: EstadoEnvio.Retirado, pesoKg: 5m);
+            _viajes.Viajes[0].Asignaciones.Add(CrearAsignacion(Hoy, aceptado));
+
+            var resumen = await CrearServicio().ResumirSeleccionAsync(ConductorId, ViajeId, new List<int> { 1, 3 });
+
+            Assert.False(resumen!.PuedeConfirmar);
+            Assert.Contains("6 kg", resumen.Motivo);
+        }
+
+        [Fact]
+        public async Task ResumirSeleccionAsync_SuperaElDesvioSumado_NoSePuedeConfirmar()
+        {
+            AgregarEjemploSeccion12();
+            _rutas.Desvios[1] = 3m;
+
+            var resumen = await CrearServicio().ResumirSeleccionAsync(ConductorId, ViajeId, new List<int> { 1, 4 });
+
+            Assert.False(resumen!.PuedeConfirmar);
+            Assert.Contains("6 km de desvío", resumen.Motivo);
+        }
+
+        [Fact]
+        public async Task ResumirSeleccionAsync_IdsRepetidos_CuentaCadaEnvioUnaVez()
+        {
+            AgregarEjemploSeccion12();
+
+            var resumen = await CrearServicio().ResumirSeleccionAsync(ConductorId, ViajeId, new List<int> { 1, 1, 5 });
+
+            Assert.True(resumen!.PuedeConfirmar);
+            Assert.Equal(2, resumen.Seleccion.CantidadPaquetes);
+            Assert.Equal(6500m, resumen.Seleccion.GananciaTotal);
+        }
+
+        [Fact]
+        public async Task AceptarVariosAsync_AsignaTodosEnUnaSolaOperacion()
+        {
+            AgregarEjemploSeccion12();
+
+            var resultado = await CrearServicio().AceptarVariosAsync(ConductorId, ViajeId, new List<int> { 1, 2, 5 });
+
+            Assert.Equal(ResultadoOperacion.Exito, resultado.Resultado);
+            Assert.Equal(1, _asignaciones.Llamadas);
+            Assert.Equal(new[] { 1, 2, 5 }, _asignaciones.Agregadas.Select(a => a.EnvioId));
+            Assert.Equal(3, resultado.Asignaciones.Count);
+            Assert.Equal(12000m, resultado.Asignaciones.Sum(a => a.Ganancia));
+
+            foreach (var id in new[] { 1, 2, 5 })
+            {
+                var envio = _envios.Envios.Single(e => e.Id == id);
+                Assert.Equal(EstadoEnvio.ConductorAsignado, envio.Estado);
+                Assert.Equal(EstadoEnvio.ConductorAsignado, Assert.Single(envio.Historial).EstadoNuevo);
+            }
+        }
+
+        [Fact]
+        public async Task AceptarVariosAsync_UnEnvioYaTomado_NoAsignaNinguno()
+        {
+            AgregarEjemploSeccion12();
+            _envios.Envios.Single(e => e.Id == 2).Estado = EstadoEnvio.ConductorAsignado;
+
+            var resultado = await CrearServicio().AceptarVariosAsync(ConductorId, ViajeId, new List<int> { 1, 2, 5 });
+
+            Assert.Equal(ResultadoOperacion.Conflicto, resultado.Resultado);
+            Assert.Contains("ya no está disponible", resultado.Mensaje);
+            Assert.Empty(_asignaciones.Agregadas);
+            Assert.Equal(EstadoEnvio.BuscandoConductor, _envios.Envios.Single(e => e.Id == 1).Estado);
+            Assert.Empty(_envios.Envios.Single(e => e.Id == 1).Historial);
+            Assert.Equal(EstadoEnvio.BuscandoConductor, _envios.Envios.Single(e => e.Id == 5).Estado);
+        }
+
+        [Fact]
+        public async Task AceptarVariosAsync_SuperaElPesoEntreTodos_DevuelveConflicto()
+        {
+            AgregarEjemploSeccion12();
+
+            var resultado = await CrearServicio().AceptarVariosAsync(ConductorId, ViajeId, new List<int> { 1, 2, 4 });
+
+            Assert.Equal(ResultadoOperacion.Conflicto, resultado.Resultado);
+            Assert.Empty(_asignaciones.Agregadas);
+        }
+
+        [Fact]
+        public async Task AceptarVariosAsync_OtroConductorTomoUnoAlMismoTiempo_DevuelveConflicto()
+        {
+            AgregarEjemploSeccion12();
+            _asignaciones.FallarPorIndiceUnico = true;
+
+            var resultado = await CrearServicio().AceptarVariosAsync(ConductorId, ViajeId, new List<int> { 1, 2 });
+
+            Assert.Equal(ResultadoOperacion.Conflicto, resultado.Resultado);
+            Assert.Contains("uno de los envíos", resultado.Mensaje);
+        }
+
+        [Fact]
+        public async Task AceptarVariosAsync_ViajeDeOtroUsuario_DevuelveNoEncontrado()
+        {
+            _viajes.Viajes.Add(CrearViaje(usuarioId: 99));
+            _envios.Envios.Add(CrearEnvio(1));
+
+            var resultado = await CrearServicio().AceptarVariosAsync(ConductorId, ViajeId, new List<int> { 1 });
+
+            Assert.Equal(ResultadoOperacion.NoEncontrado, resultado.Resultado);
+            Assert.Empty(_asignaciones.Agregadas);
+        }
+
         // ---------- Datos de prueba ----------
 
         private static Viaje CrearViaje(int usuarioId = ConductorId, int maxPaquetes = 3, decimal pesoMaxKg = 10m,
@@ -627,6 +833,8 @@ namespace RuteaYa.Tests
                 return Task.FromResult(Envios.Where(e => ids.Contains(e.Id)).ToList());
             }
 
+            public Task<List<Envio>> ListarFinalizadosPorUsuarioAsync(int usuarioId) => throw new NotImplementedException();
+
             public Task<Envio?> ObtenerPorIdAsync(int id)
             {
                 return Task.FromResult(Envios.FirstOrDefault(e => e.Id == id));
@@ -655,13 +863,14 @@ namespace RuteaYa.Tests
 
             public List<Asignacion> Agregadas { get; } = new List<Asignacion>();
             public bool FallarPorIndiceUnico { get; set; }
+            public int Llamadas { get; private set; }
 
             public Task<List<Asignacion>> ListarPorConductorAsync(int conductorId)
             {
                 return Task.FromResult(Agregadas.ToList());
             }
 
-            public Task<List<Asignacion>> ListarEntregadasPorConductorAsync(int conductorId, DateTime? desde, DateTime? hasta) => throw new NotImplementedException();
+            public Task<List<Asignacion>> ListarEntregadasPorConductorAsync(int conductorId, DateOnly? desde, DateOnly? hasta) => throw new NotImplementedException();
             public Task<Asignacion?> ObtenerPorIdAsync(int id)
             {
                 return Task.FromResult(Agregadas.FirstOrDefault(a => a.Id == id));
@@ -669,6 +878,7 @@ namespace RuteaYa.Tests
 
             public Task AgregarAsync(List<Asignacion> asignaciones)
             {
+                Llamadas++;
                 if (FallarPorIndiceUnico)
                 {
                     throw new DbUpdateException("Índice único IX_Asignaciones_EnvioId");
@@ -725,12 +935,6 @@ namespace RuteaYa.Tests
             }
 
             public Task<RutaResultadoDto> CalcularRutaAsync(IReadOnlyList<CoordenadaDto> recorrido, CancellationToken cancelacion = default) => throw new NotSupportedException();
-            public Task<CoordenadaDto> GeocodificarDireccionAsync(string direccion) => throw new NotSupportedException();
-            public Task<RutaResultadoDto> CalcularRutaConParadasAsync(List<string> paradas) => throw new NotSupportedException();
-            public Task<RutaResultadoDto> CalcularRutaAlternativaEnvioAsync(string origen, string destino, string retiroPaquete, string entregaPaquete) => throw new NotSupportedException();
-            public Task<decimal> CalcularDesvioAsync(string rutaOriginalId, string paradaExtra) => throw new NotSupportedException();
-            public Task<DetalleOportunidadRutaDto> ObtenerDetalleOportunidadAsync(string origenHabitual, string destinoHabitual, string retiroEnvio, string entregaEnvio) => throw new NotSupportedException();
-            public Task<List<string>> BuscarDireccionesAsync(string texto) => throw new NotSupportedException();
         }
     }
 }

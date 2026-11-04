@@ -1,0 +1,125 @@
+@model RuteaYa.DTOs.HistorialDto
+@{
+    ViewData["Title"] = "Historial";
+    var desde = ViewData["Desde"] as string;
+    var hasta = ViewData["Hasta"] as string;
+    var orden = ViewData["Orden"] as string ?? "fecha_desc";
+    var estado = ViewData["Estado"] as string ?? "todos";
+
+    string ClaseFiltro(string filtro) => estado == filtro ? "btn-dark" : "btn-outline-secondary";
+}
+
+<div class="mb-3">
+    <h1 class="h3 mb-0">Historial</h1>
+    <p class="text-muted small mb-0">Operaciones anteriores.</p>
+</div>
+
+@if (ViewData["Error"] is string error)
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<div class="row g-3 mb-2">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+                <div class="text-muted small">Viajes realizados</div>
+                <div class="fs-3 fw-bold">@Model.ViajesRealizados</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+                <div class="text-muted small">Envíos transportados</div>
+                <div class="fs-3 fw-bold">@Model.EnviosTransportados</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+                <div class="text-muted small">Ganancia efectiva</div>
+                <div class="fs-3 fw-bold text-success">@Model.GananciaEfectiva.Moneda()</div>
+            </div>
+        </div>
+    </div>
+</div>
+<p class="text-muted small mb-4">
+    La ganancia efectiva suma solo los envíos que transportaste y ya se entregaron.
+    Para una estimación con los envíos disponibles mirá el <a asp-controller="Potencial" asp-action="Index">potencial mensual</a>.
+</p>
+
+<nav class="d-flex flex-wrap gap-2 mb-3">
+    <a class="btn btn-sm rounded-pill @ClaseFiltro("todos")" asp-action="Index" asp-route-desde="@desde" asp-route-hasta="@hasta" asp-route-orden="@orden">Todos</a>
+    <a class="btn btn-sm rounded-pill @ClaseFiltro("viajes")" asp-action="Index" asp-route-estado="viajes" asp-route-desde="@desde" asp-route-hasta="@hasta" asp-route-orden="@orden">Viajes realizados</a>
+    <a class="btn btn-sm rounded-pill @ClaseFiltro("entregados")" asp-action="Index" asp-route-estado="entregados" asp-route-desde="@desde" asp-route-hasta="@hasta" asp-route-orden="@orden">Mis envíos entregados</a>
+    <a class="btn btn-sm rounded-pill @ClaseFiltro("cancelados")" asp-action="Index" asp-route-estado="cancelados" asp-route-desde="@desde" asp-route-hasta="@hasta" asp-route-orden="@orden">Mis envíos cancelados</a>
+</nav>
+
+<div class="card border-0 shadow-sm rounded-4 mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <input type="hidden" name="estado" value="@estado" />
+            <div class="col-sm-6 col-md-3">
+                <label class="form-label small text-muted" for="desde">Desde</label>
+                <input type="date" id="desde" name="desde" value="@desde" class="form-control" />
+            </div>
+            <div class="col-sm-6 col-md-3">
+                <label class="form-label small text-muted" for="hasta">Hasta</label>
+                <input type="date" id="hasta" name="hasta" value="@hasta" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted" for="orden">Ordenar por</label>
+                <select id="orden" name="orden" class="form-select">
+                    <option value="fecha_desc" selected="@(orden == "fecha_desc")">Más recientes primero</option>
+                    <option value="fecha_asc" selected="@(orden == "fecha_asc")">Más antiguos primero</option>
+                    <option value="monto_desc" selected="@(orden == "monto_desc")">Mayor monto</option>
+                    <option value="monto_asc" selected="@(orden == "monto_asc")">Menor monto</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-dark w-100">Filtrar</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Limpiar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4">
+    @if (Model.Items.Count == 0)
+    {
+        <div class="card-body text-center text-muted py-5">No hay registros en el historial para los filtros seleccionados.</div>
+    }
+    else
+    {
+        <ul class="list-group list-group-flush rounded-4">
+            @foreach (var item in Model.Items)
+            {
+                <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+                    <div>
+                        <div class="fw-semibold">@item.Descripcion</div>
+                        <div class="text-muted small">
+                            @if (item.Estado.HasValue)
+                            {
+                                <span class="badge rounded-pill @item.Estado.Value.ClaseBadge() me-1">@item.Estado.Value.Texto()</span>
+                            }
+                            @item.Detalle · @item.Fecha.ToString("dd/MM/yyyy")
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <span class="fw-semibold @(item.Tipo == "Viaje" ? "text-success" : string.Empty)">@item.Monto.Moneda()</span>
+                        @if (item.Tipo == "Viaje")
+                        {
+                            <a class="btn btn-outline-secondary btn-sm" asp-controller="Viajes" asp-action="Detalle" asp-route-id="@item.Id">Ver viaje</a>
+                        }
+                        else
+                        {
+                            <a class="btn btn-outline-secondary btn-sm" asp-controller="Envios" asp-action="Detalle" asp-route-id="@item.Id">Ver envío</a>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</div>

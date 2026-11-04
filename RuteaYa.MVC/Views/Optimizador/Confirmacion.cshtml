@@ -1,0 +1,104 @@
+@model RuteaYa.DTOs.ResumenSeleccionDto
+@{
+    ViewData["Title"] = "Confirmar selección";
+    var criterio = ViewData["Criterio"] as string ?? "ganancia";
+    var conflicto = ViewData["Conflicto"] as string;
+    var motivo = conflicto ?? Model.Motivo;
+    var seleccion = Model.Seleccion;
+    var cultura = System.Globalization.CultureInfo.GetCultureInfo("es-AR");
+}
+
+<div class="mb-3">
+    <h1 class="h3 mb-0">Confirmar selección</h1>
+    <p class="text-muted small mb-0">Revisá el resumen antes de reservar.</p>
+</div>
+
+@if (motivo != null)
+{
+    <div class="alert alert-danger">
+        <div class="fw-semibold">@(conflicto != null ? "No se pudo reservar la selección." : "Esta selección ya no se puede reservar.")</div>
+        <div>@motivo</div>
+        <div class="small mt-1">Recalculá la combinación con los envíos disponibles o cancelá la operación.</div>
+    </div>
+}
+
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+            <div>
+                <div class="text-muted small">Viaje</div>
+                <h2 class="h5 mb-0">@Model.OrigenDir → @Model.DestinoDir</h2>
+                <div class="text-muted small">
+                    Hasta @Model.MaxPaquetes paquetes, @Model.PesoMaxKg.Numero() kg y @Model.DesvioMaxKm.Numero() km de desvío.
+                </div>
+            </div>
+        </div>
+
+        <ul class="list-group list-group-flush mb-3">
+            @foreach (var envio in seleccion.Envios)
+            {
+                <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 px-0 py-3">
+                    <div>
+                        <div class="fw-semibold">@envio.Origen → @envio.Destino</div>
+                        <div class="text-muted small">
+                            @envio.Descripcion · @envio.PesoKg.Numero() kg · @envio.DesvioKm.Numero() km
+                            @if (envio.FechaViaje != default)
+                            {
+                                <text>· @envio.FechaViaje.ToString("ddd dd/MM", cultura)</text>
+                            }
+                        </div>
+                    </div>
+                    <span class="fw-semibold text-success">@envio.MontoPago.Moneda()</span>
+                </li>
+            }
+        </ul>
+
+        <div class="row g-3">
+            <div class="col-6 col-md-3">
+                <div class="border rounded-3 p-3 text-center h-100">
+                    <div class="text-success fw-bold fs-5">@seleccion.GananciaTotal.Moneda()</div>
+                    <div class="text-muted small">Ganancia total</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="border rounded-3 p-3 text-center h-100">
+                    <div class="fw-bold fs-5">@seleccion.PesoTotalKg.Numero() kg</div>
+                    <div class="text-muted small">Peso total</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="border rounded-3 p-3 text-center h-100">
+                    <div class="fw-bold fs-5">@seleccion.DesvioTotalKm.Numero() km</div>
+                    <div class="text-muted small">Desvío total</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="border rounded-3 p-3 text-center h-100">
+                    <div class="fw-bold fs-5">@seleccion.CantidadPaquetes</div>
+                    <div class="text-muted small">Paquetes</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex flex-wrap gap-2 justify-content-end">
+    @if (motivo != null)
+    {
+        <a class="btn btn-outline-secondary" asp-controller="Viajes" asp-action="Index">Cancelar</a>
+        <a class="btn btn-dark" asp-action="Index" asp-route-viajeId="@Model.ViajeId" asp-route-criterio="@criterio">Recalcular</a>
+    }
+    else
+    {
+        <a class="btn btn-outline-secondary" asp-action="Index" asp-route-viajeId="@Model.ViajeId" asp-route-criterio="@criterio">Volver</a>
+        <form asp-action="Confirmar" method="post">
+            <input type="hidden" name="viajeId" value="@Model.ViajeId" />
+            <input type="hidden" name="criterio" value="@criterio" />
+            @foreach (var envio in seleccion.Envios)
+            {
+                <input type="hidden" name="envioIds" value="@envio.EnvioId" />
+            }
+            <button type="submit" class="btn btn-dark">Confirmar y reservar</button>
+        </form>
+    }
+</div>
