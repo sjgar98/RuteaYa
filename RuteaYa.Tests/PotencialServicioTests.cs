@@ -1,6 +1,8 @@
-﻿using RuteaYa.API.Servicios;
-using RuteaYa.DTOs;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using RuteaYa.API.Servicios;
+using RuteaYa.API.Servicios.Interfaces;
 using RuteaYa.DTOs.Enums;
+using RuteaYa.DTOs.Rutas;
 using RuteaYa.Entidades;
 using RuteaYa.Repositorios.Interfaces;
 
@@ -8,190 +10,270 @@ namespace RuteaYa.Tests
 {
     public class PotencialServicioTests
     {
-        private const int UsuarioId = 1;
+        private const int ConductorId = 1;
+        private const int RemitenteId = 2;
+
+        private const decimal OrigenLat = -34.5627m, OrigenLng = -58.4583m;
+        private const decimal DestinoLat = -34.7608m, DestinoLng = -58.4060m;
+
+        private static readonly DateOnly Hoy = new DateOnly(2026, 11, 10);
+        private const string MesActual = "2026-11";
+
+        private readonly ViajeRepositorioFalso _viajes = new ViajeRepositorioFalso();
+        private readonly EnvioRepositorioFalso _envios = new EnvioRepositorioFalso();
+        private readonly RutaServicioFalso _rutas;
+
+        public PotencialServicioTests()
+        {
+            _rutas = new RutaServicioFalso(_envios);
+        }
+
+        private PotencialServicio CrearServicio()
+        {
+            var oportunidades = new OportunidadesServicio(
+                _viajes, _envios, new AsignacionRepositorioFalso(), _rutas,
+                NullLogger<OportunidadesServicio>.Instance);
+            var optimizador = new OptimizadorServicio(
+                _viajes, _envios, oportunidades,
+                NullLogger<OptimizadorServicio>.Instance);
+            return new PotencialServicio(_viajes, optimizador);
+        }
+
+        [Theory]
+        [InlineData("2026-13")]
+        [InlineData("noviembre")]
+        [InlineData("")]
+        public async Task ObtenerPotencialAsync_MesInvalido_DevuelveNull(string mes)
+        {
+            var resultado = await CrearServicio().ObtenerPotencialAsync(ConductorId, mes, "ganancia", Hoy);
+
+            Assert.Null(resultado);
+        }
 
         [Fact]
-        public async Task ObtenerPotencialAsync_SinViajesActivos_DevuelveEstructuraVacia()
+        public async Task ObtenerPotencialAsync_MesPasado_DevuelveVacio()
         {
-            var viajeRepo = new ViajeRepositorioFalso();
-            var envioRepo = new EnvioRepositorioFalso();
-            var servicio = new PotencialServicio(viajeRepo, envioRepo);
+            _viajes.Viajes.Add(CrearViaje(10));
+            AgregarEnvio(1, 4000m, 2m, 1m);
 
-            var resultado = await servicio.ObtenerPotencialAsync(UsuarioId, "2026-11", "ganancia");
+            var resultado = await CrearServicio().ObtenerPotencialAsync(ConductorId, "2026-10", "ganancia", Hoy);
 
             Assert.NotNull(resultado);
-            Assert.Equal("2026-11", resultado.Mes);
-            Assert.Equal("ganancia", resultado.Criterio);
+            Assert.Equal(0, resultado!.ViajesAnalizados);
             Assert.Equal(0m, resultado.GananciaPotencial);
             Assert.Empty(resultado.MejorRecorrido);
         }
 
         [Fact]
-        public async Task ObtenerPotencialAsync_CriterioTodos_DevuelveTodasLasOportunidadesCompatibles()
+        public async Task ObtenerPotencialAsync_EjemploDelEnunciado_UsaLaCombinacionOptima()
         {
-            var viajeRepo = new ViajeRepositorioFalso();
-            viajeRepo.Viajes.Add(CrearViaje(id: 1, usuarioId: UsuarioId, distancia: 10m, desvioMax: 5m));
+            _viajes.Viajes.Add(CrearViaje(10));
+            AgregarEjemploSeccion12();
 
-            var envioRepo = new EnvioRepositorioFalso();
-            envioRepo.Envios.Add(CrearEnvio(id: 101, usuarioId: 2, monto: 5000m, fecha: new DateOnly(2026, 11, 10)));
-            envioRepo.Envios.Add(CrearEnvio(id: 102, usuarioId: 2, monto: 8000m, fecha: new DateOnly(2026, 11, 15)));
-
-            var servicio = new PotencialServicio(viajeRepo, envioRepo);
-
-            var resultado = await servicio.ObtenerPotencialAsync(UsuarioId, "2026-11", "todos");
+            var resultado = await CrearServicio().ObtenerPotencialAsync(ConductorId, MesActual, "ganancia", Hoy);
 
             Assert.NotNull(resultado);
-            Assert.Equal("todos", resultado.Criterio);
-            Assert.Equal(2, resultado.PaquetesPosibles);
-            Assert.Equal(13000m, resultado.GananciaPotencial);
-            Assert.Equal(2, resultado.MejorRecorrido.Count);
-        }
-
-        [Fact]
-        public async Task ObtenerPotencialAsync_CriterioGanancia_PriorizaMayorMonto()
-        {
-            var viajeRepo = new ViajeRepositorioFalso();
-            viajeRepo.Viajes.Add(CrearViaje(id: 1, usuarioId: UsuarioId, distancia: 10m, desvioMax: 5m));
-
-            var envioRepo = new EnvioRepositorioFalso();
-            // Envío con menor ganancia
-            envioRepo.Envios.Add(CrearEnvio(id: 101, usuarioId: 2, monto: 4000m, fecha: new DateOnly(2026, 11, 10)));
-            // Envío con mayor ganancia para el mismo viaje disponible
-            envioRepo.Envios.Add(CrearEnvio(id: 102, usuarioId: 2, monto: 12000m, fecha: new DateOnly(2026, 11, 12)));
-
-            var servicio = new PotencialServicio(viajeRepo, envioRepo);
-
-            var resultado = await servicio.ObtenerPotencialAsync(UsuarioId, "2026-11", "ganancia");
-
-            Assert.NotNull(resultado);
-            Assert.Equal("ganancia", resultado.Criterio);
-            Assert.Equal(1, resultado.PaquetesPosibles);
+            Assert.Equal(1, resultado!.ViajesAnalizados);
+            Assert.Equal(3, resultado.PaquetesPosibles);
             Assert.Equal(12000m, resultado.GananciaPotencial);
-            var itemSeleccionado = Assert.Single(resultado.MejorRecorrido);
-            Assert.Equal(12000m, itemSeleccionado.GananciaEstimada);
+            var fila = Assert.Single(resultado.MejorRecorrido);
+            Assert.Equal(9m, fila.PesoTotalKg);
+            Assert.Equal(3.5m, fila.DesvioTotalKm);
+            Assert.Equal(new[] { 1, 2, 5 }, resultado.DetalleAsignaciones.Select(d => d.EnvioId).OrderBy(id => id));
         }
 
         [Fact]
-        public async Task ObtenerPotencialAsync_CriterioDesvio_FiltraDesviosAltosYPriorizaMinimo()
+        public async Task ObtenerPotencialAsync_CriterioDesvio_EligeElMenorDesvio()
         {
-            var viajeRepo = new ViajeRepositorioFalso();
-            viajeRepo.Viajes.Add(CrearViaje(id: 1, usuarioId: UsuarioId, distancia: 10m, desvioMax: 10m, lat1: -34.60m, lon1: -58.38m, lat2: -34.70m, lon2: -58.48m));
+            _viajes.Viajes.Add(CrearViaje(10));
+            AgregarEjemploSeccion12();
 
-            var envioRepo = new EnvioRepositorioFalso();
-            // Envío lejano (generará mayor desvío)
-            envioRepo.Envios.Add(CrearEnvio(id: 101, usuarioId: 2, monto: 15000m, lat1: -34.50m, lon1: -58.20m, lat2: -34.90m, lon2: -58.90m, fecha: new DateOnly(2026, 11, 5)));
-            // Envío muy cercano a la ruta (generará menor desvío, menor o igual a 2km)
-            envioRepo.Envios.Add(CrearEnvio(id: 102, usuarioId: 2, monto: 5000m, lat1: -34.60m, lon1: -58.38m, lat2: -34.61m, lon2: -58.39m, fecha: new DateOnly(2026, 11, 6)));
-
-            var servicio = new PotencialServicio(viajeRepo, envioRepo);
-
-            var resultado = await servicio.ObtenerPotencialAsync(UsuarioId, "2026-11", "desvio");
+            var resultado = await CrearServicio().ObtenerPotencialAsync(ConductorId, MesActual, "desvio", Hoy);
 
             Assert.NotNull(resultado);
-            Assert.Equal("desvio", resultado.Criterio);
-            // Debe filtrar y retener el de menor desvío descartando el excesivo
-            var item = Assert.Single(resultado.MejorRecorrido);
-            Assert.Equal(5000m, item.GananciaEstimada);
-            Assert.True(item.DesvioTotalKm <= 2.0m);
+            Assert.Equal("desvio", resultado!.Criterio);
+            var fila = Assert.Single(resultado.MejorRecorrido);
+            Assert.Equal(0.5m, fila.DesvioTotalKm);
+            Assert.Equal(2500m, resultado.GananciaPotencial);
         }
 
         [Fact]
-        public async Task ObtenerPotencialAsync_NoCuentaEnviosIncompatiblesPorPeso_ODevuelveVacio()
+        public async Task ObtenerPotencialAsync_CalculaPromedioYGananciaPorSemana()
         {
-            var viajeRepo = new ViajeRepositorioFalso();
-            viajeRepo.Viajes.Add(CrearViaje(id: 1, usuarioId: UsuarioId, pesoMax: 2m));
+            _viajes.Viajes.Add(CrearViaje(10));
+            _viajes.Viajes.Add(CrearViaje(11));
+            AgregarEnvio(1, 6000m, 2m, 1m);
+            AgregarEnvio(2, 6000m, 2m, 1m);
+            _viajes.Viajes[1].MaxPaquetes = 1;
+            _viajes.Viajes[0].MaxPaquetes = 1;
 
-            var envioRepo = new EnvioRepositorioFalso();
-            // Envío con peso superior al permitido por el viaje
-            envioRepo.Envios.Add(CrearEnvio(id: 101, usuarioId: 2, peso: 5m, monto: 10000m, fecha: new DateOnly(2026, 11, 10)));
-
-            var servicio = new PotencialServicio(viajeRepo, envioRepo);
-
-            var resultado = await servicio.ObtenerPotencialAsync(UsuarioId, "2026-11", "ganancia");
+            var resultado = await CrearServicio().ObtenerPotencialAsync(ConductorId, MesActual, "ganancia", Hoy);
 
             Assert.NotNull(resultado);
-            Assert.Equal(0m, resultado.GananciaPotencial);
-            Assert.Empty(resultado.MejorRecorrido);
+            Assert.Equal(2, resultado!.ViajesAnalizados);
+            Assert.Equal(12000m, resultado.GananciaPotencial);
+            Assert.Equal(6000m, resultado.PromedioPorViaje);
+            Assert.Equal(4000m, resultado.GananciaPorSemana);
         }
 
         [Fact]
         public async Task ObtenerPotencialAsync_NoDuplicaEnvioEnDistintosViajes()
         {
-            var viajeRepo = new ViajeRepositorioFalso();
-            // Dos viajes activos
-            viajeRepo.Viajes.Add(CrearViaje(id: 1, usuarioId: UsuarioId, distancia: 10m, desvioMax: 20m));
-            viajeRepo.Viajes.Add(CrearViaje(id: 2, usuarioId: UsuarioId, distancia: 10m, desvioMax: 20m));
+            _viajes.Viajes.Add(CrearViaje(10));
+            _viajes.Viajes.Add(CrearViaje(11));
+            AgregarEnvio(1, 5000m, 2m, 1m);
 
-            var envioRepo = new EnvioRepositorioFalso();
-            // Un único envío disponible compatible con ambos
-            envioRepo.Envios.Add(CrearEnvio(id: 101, usuarioId: 2, monto: 6000m, fecha: new DateOnly(2026, 11, 10)));
-
-            var servicio = new PotencialServicio(viajeRepo, envioRepo);
-
-            var resultado = await servicio.ObtenerPotencialAsync(UsuarioId, "2026-11", "todos");
+            var resultado = await CrearServicio().ObtenerPotencialAsync(ConductorId, MesActual, "ganancia", Hoy);
 
             Assert.NotNull(resultado);
-            // El envío 101 debe asignarse a un solo viaje, evitando duplicarse en ambos
-            var asignacionesAlEnvio = resultado.MejorRecorrido.Count;
-            Assert.Equal(1, asignacionesAlEnvio);
-            Assert.Equal(6000m, resultado.GananciaPotencial);
+            Assert.Equal(2, resultado!.ViajesAnalizados);
+            Assert.Equal(1, resultado.PaquetesPosibles);
+            Assert.Equal(5000m, resultado.GananciaPotencial);
+            Assert.Equal(10, Assert.Single(resultado.MejorRecorrido).ViajeId);
+            Assert.Single(resultado.DetalleAsignaciones);
         }
 
-        private static Viaje CrearViaje(int id, int usuarioId, decimal distancia = 10m, decimal desvioMax = 5m, decimal pesoMax = 10m, decimal lat1 = -34.5810m, decimal lon1 = -58.4208m, decimal lat2 = -34.6037m, decimal lon2 = -58.3816m)
+        [Fact]
+        public async Task ObtenerPotencialAsync_IgnoraViajesInactivos()
         {
-            return new Viaje
+            var viaje = CrearViaje(10);
+            viaje.Activo = false;
+            _viajes.Viajes.Add(viaje);
+            AgregarEnvio(1, 5000m, 2m, 1m);
+
+            var resultado = await CrearServicio().ObtenerPotencialAsync(ConductorId, MesActual, "ganancia", Hoy);
+
+            Assert.NotNull(resultado);
+            Assert.Equal(0, resultado!.ViajesAnalizados);
+            Assert.Equal(0m, resultado.GananciaPotencial);
+        }
+
+        [Fact]
+        public async Task ObtenerPotencialAsync_ViajeSinSalidasEnElPeriodo_NoSeAnaliza()
+        {
+            _viajes.Viajes.Add(CrearViaje(10, DiaSemana.Martes));
+            AgregarEnvio(1, 5000m, 2m, 1m, fechaLimite: new DateOnly(2026, 12, 31));
+
+            var resultado = await CrearServicio().ObtenerPotencialAsync(ConductorId, MesActual, "ganancia", new DateOnly(2026, 11, 25));
+
+            Assert.NotNull(resultado);
+            Assert.Equal(0, resultado!.ViajesAnalizados);
+            Assert.Empty(resultado.MejorRecorrido);
+        }
+
+        [Fact]
+        public async Task ObtenerPotencialAsync_EnvioConFechaLimitePosteriorAlMes_Cuenta()
+        {
+            _viajes.Viajes.Add(CrearViaje(10));
+            AgregarEnvio(1, 5000m, 2m, 1m, fechaLimite: new DateOnly(2027, 1, 15));
+
+            var resultado = await CrearServicio().ObtenerPotencialAsync(ConductorId, "2026-12", "ganancia", Hoy);
+
+            Assert.NotNull(resultado);
+            Assert.Equal(5000m, resultado!.GananciaPotencial);
+            Assert.Equal(new DateOnly(2026, 12, 1), Assert.Single(resultado.DetalleAsignaciones).FechaViaje);
+        }
+
+        [Fact]
+        public async Task ObtenerPotencialAsync_RespetaCapacidadYPeso()
+        {
+            _viajes.Viajes.Add(CrearViaje(10, maxPaquetes: 1, pesoMaxKg: 3m));
+            AgregarEnvio(1, 9000m, 5m, 1m);
+            AgregarEnvio(2, 3000m, 2m, 1m);
+            AgregarEnvio(3, 2000m, 1m, 1m);
+
+            var resultado = await CrearServicio().ObtenerPotencialAsync(ConductorId, MesActual, "ganancia", Hoy);
+
+            Assert.NotNull(resultado);
+            Assert.Equal(1, resultado!.PaquetesPosibles);
+            Assert.Equal(3000m, resultado.GananciaPotencial);
+        }
+
+        [Fact]
+        public async Task ObtenerPotencialAsync_NoCuentaEnviosConDesvioExcesivo()
+        {
+            _viajes.Viajes.Add(CrearViaje(10));
+            AgregarEnvio(1, 9000m, 2m, 8m);
+
+            var resultado = await CrearServicio().ObtenerPotencialAsync(ConductorId, MesActual, "ganancia", Hoy);
+
+            Assert.NotNull(resultado);
+            Assert.Equal(1, resultado!.ViajesAnalizados);
+            Assert.Equal(0m, resultado.GananciaPotencial);
+            Assert.Empty(resultado.MejorRecorrido);
+        }
+
+        private void AgregarEjemploSeccion12()
+        {
+            AgregarEnvio(1, 4000m, 2m, 1.0m);
+            AgregarEnvio(2, 5500m, 6m, 2.0m);
+            AgregarEnvio(3, 3500m, 4m, 1.0m);
+            AgregarEnvio(4, 7000m, 8m, 3.0m);
+            AgregarEnvio(5, 2500m, 1m, 0.5m);
+        }
+
+        private void AgregarEnvio(int id, decimal monto, decimal pesoKg, decimal desvioKm, DateOnly? fechaLimite = null)
+        {
+            var fraccion = 0.2m + id / 10000m;
+            _envios.Envios.Add(new Envio
             {
                 Id = id,
-                UsuarioId = usuarioId,
-                OrigenDir = "Caballito, CABA",
-                OrigenLat = lat1,
-                OrigenLng = lon1,
-                DestinoDir = "Centro, CABA",
-                DestinoLat = lat2,
-                DestinoLng = lon2,
-                DistanciaKm = distancia,
-                DesvioMaxKm = desvioMax,
-                PesoMaxKg = pesoMax,
+                UsuarioId = RemitenteId,
+                OrigenDir = $"Retiro {id}",
+                OrigenLat = OrigenLat + (DestinoLat - OrigenLat) * fraccion,
+                OrigenLng = OrigenLng + (DestinoLng - OrigenLng) * fraccion,
+                DestinoDir = $"Entrega {id}",
+                DestinoLat = OrigenLat + (DestinoLat - OrigenLat) * 0.75m,
+                DestinoLng = OrigenLng + (DestinoLng - OrigenLng) * 0.75m,
+                FechaLimite = fechaLimite ?? Hoy.AddDays(14),
+                PesoKg = pesoKg,
+                Tamano = TamanoEnvio.Pequeno,
+                Descripcion = $"Paquete {id}",
+                Monto = monto,
+                Estado = EstadoEnvio.BuscandoConductor
+            });
+            _rutas.Desvios[id] = desvioKm;
+        }
+
+        private static Viaje CrearViaje(int id, DiaSemana? unicoDia = null, int maxPaquetes = 3, decimal pesoMaxKg = 10m)
+        {
+            var viaje = new Viaje
+            {
+                Id = id,
+                UsuarioId = ConductorId,
+                OrigenDir = "Belgrano, CABA",
+                OrigenLat = OrigenLat,
+                OrigenLng = OrigenLng,
+                DestinoDir = "Lomas de Zamora, Buenos Aires",
+                DestinoLat = DestinoLat,
+                DestinoLng = DestinoLng,
+                HoraSalida = new TimeOnly(8, 0),
+                HoraLlegada = new TimeOnly(8, 55),
+                MaxPaquetes = maxPaquetes,
+                PesoMaxKg = pesoMaxKg,
+                DesvioMaxKm = 5m,
                 Activo = true
             };
-        }
 
-        private static Envio CrearEnvio(int id, int usuarioId, decimal monto = 4000m, decimal peso = 1m, decimal lat1 = -34.5810m, decimal lon1 = -58.4208m, decimal lat2 = -34.6037m, decimal lon2 = -58.3816m, DateOnly? fecha = null)
-        {
-            return new Envio
+            var dias = unicoDia.HasValue ? new[] { unicoDia.Value } : Enum.GetValues<DiaSemana>();
+            foreach (var dia in dias)
             {
-                Id = id,
-                UsuarioId = usuarioId,
-                OrigenDir = "Origen Envío",
-                OrigenLat = lat1,
-                OrigenLng = lon1,
-                DestinoDir = "Destino Envío",
-                DestinoLat = lat2,
-                DestinoLng = lon2,
-                FechaLimite = fecha ?? new DateOnly(2026, 11, 20),
-                PesoKg = peso,
-                Tamano = TamanoEnvio.Pequeno,
-                Descripcion = "Test Paquete",
-                Monto = monto,
-                Estado = EstadoEnvio.BuscandoConductor,
-                CreadoEn = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc)
-            };
+                viaje.Dias.Add(new ViajeDia { ViajeId = id, DiaSemana = dia });
+            }
+
+            return viaje;
         }
 
-        // Dobles de prueba falsos (Mocks simulados estilo repositorio)
         private class ViajeRepositorioFalso : IViajeRepositorio
         {
             public List<Viaje> Viajes { get; } = new List<Viaje>();
 
-            public Task<List<Viaje>> ListarActivosPorUsuarioAsync(int usuarioId)
-            {
-                return Task.FromResult(Viajes.Where(v => v.UsuarioId == usuarioId && v.Activo).ToList());
-            }
+            public Task<List<Viaje>> ListarPorUsuarioAsync(int usuarioId, bool? activo = null)
+                => Task.FromResult(Viajes.Where(v => v.UsuarioId == usuarioId && (activo == null || v.Activo == activo)).ToList());
 
             public Task<Viaje?> ObtenerPorIdAsync(int id) => Task.FromResult(Viajes.FirstOrDefault(v => v.Id == id));
             public Task AgregarAsync(Viaje viaje) { Viajes.Add(viaje); return Task.CompletedTask; }
             public Task GuardarCambiosAsync() => Task.CompletedTask;
-            public Task<List<Viaje>> ListarPorUsuarioAsync(int usuarioId) => Task.FromResult(Viajes.Where(v => v.UsuarioId == usuarioId).ToList());
         }
 
         private class EnvioRepositorioFalso : IEnvioRepositorio
@@ -199,27 +281,64 @@ namespace RuteaYa.Tests
             public List<Envio> Envios { get; } = new List<Envio>();
 
             public Task<List<Envio>> ListarPorUsuarioAsync(int usuarioId, EstadoEnvio? estado = null)
-            {
-                return Task.FromResult(Envios.Where(e => e.UsuarioId == usuarioId).ToList());
-            }
+                => Task.FromResult(Envios.Where(e => e.UsuarioId == usuarioId && (estado == null || e.Estado == estado)).ToList());
 
             public Task<List<Envio>> ListarDisponiblesAsync(DateOnly desde, int usuarioIdExcluido)
-            {
-                return Task.FromResult(Envios.Where(e => e.Estado == EstadoEnvio.BuscandoConductor && e.UsuarioId != usuarioIdExcluido).ToList());
-            }
-
-            public Task<List<Envio>> ListarDisponiblesRangoAsync(DateOnly desde, DateOnly hasta, int usuarioIdExcluido)
-            {
-                return Task.FromResult(Envios.Where(e => e.Estado == EstadoEnvio.BuscandoConductor
-                                                       && e.UsuarioId != usuarioIdExcluido
-                                                       && e.FechaLimite >= desde
-                                                       && e.FechaLimite <= hasta).ToList());
-            }
+                => Task.FromResult(Envios
+                    .Where(e => e.Estado == EstadoEnvio.BuscandoConductor && e.FechaLimite >= desde && e.UsuarioId != usuarioIdExcluido)
+                    .OrderBy(e => e.FechaLimite)
+                    .ToList());
 
             public Task<List<Envio>> ListarPorIdsAsync(List<int> ids) => Task.FromResult(Envios.Where(e => ids.Contains(e.Id)).ToList());
             public Task<Envio?> ObtenerPorIdAsync(int id) => Task.FromResult(Envios.FirstOrDefault(e => e.Id == id));
             public Task AgregarAsync(Envio envio) { Envios.Add(envio); return Task.CompletedTask; }
             public Task GuardarCambiosAsync() => Task.CompletedTask;
+        }
+
+        private class AsignacionRepositorioFalso : IAsignacionRepositorio
+        {
+            public Task<List<Asignacion>> ListarPorConductorAsync(int conductorId) => Task.FromResult(new List<Asignacion>());
+            public Task<List<Asignacion>> ListarEntregadasPorConductorAsync(int conductorId, DateTime? desde, DateTime? hasta) => throw new NotImplementedException();
+            public Task<Asignacion?> ObtenerPorIdAsync(int id) => Task.FromResult<Asignacion?>(null);
+            public Task AgregarAsync(List<Asignacion> asignaciones) => Task.CompletedTask;
+            public Task GuardarCambiosAsync() => Task.CompletedTask;
+        }
+
+        private class RutaServicioFalso : IRutaServicio
+        {
+            private readonly EnvioRepositorioFalso _envios;
+
+            public RutaServicioFalso(EnvioRepositorioFalso envios)
+            {
+                _envios = envios;
+            }
+
+            public Dictionary<int, decimal> Desvios { get; } = new Dictionary<int, decimal>();
+
+            public Task<DetalleOportunidadRutaDto> CompararConEnvioAsync(
+                IReadOnlyList<CoordenadaDto> recorridoHabitual,
+                CoordenadaDto retiro, CoordenadaDto entrega,
+                CancellationToken cancelacion = default)
+            {
+                var envio = _envios.Envios.Single(e => e.OrigenLat == retiro.Latitud && e.OrigenLng == retiro.Longitud);
+                var desvio = Desvios.GetValueOrDefault(envio.Id, 1m);
+                return Task.FromResult(new DetalleOportunidadRutaDto
+                {
+                    DistanciaHabitualKm = 18.4m,
+                    DistanciaConEnvioKm = 18.4m + desvio,
+                    DesvioKm = desvio,
+                    TiempoHabitualMinutos = 55,
+                    TiempoAdicionalMinutos = (int)Math.Round(desvio * 3)
+                });
+            }
+
+            public Task<RutaResultadoDto> CalcularRutaAsync(IReadOnlyList<CoordenadaDto> recorrido, CancellationToken cancelacion = default) => throw new NotSupportedException();
+            public Task<CoordenadaDto> GeocodificarDireccionAsync(string direccion) => throw new NotSupportedException();
+            public Task<RutaResultadoDto> CalcularRutaConParadasAsync(List<string> paradas) => throw new NotSupportedException();
+            public Task<RutaResultadoDto> CalcularRutaAlternativaEnvioAsync(string origen, string destino, string retiroPaquete, string entregaPaquete) => throw new NotSupportedException();
+            public Task<decimal> CalcularDesvioAsync(string rutaOriginalId, string paradaExtra) => throw new NotSupportedException();
+            public Task<DetalleOportunidadRutaDto> ObtenerDetalleOportunidadAsync(string origenHabitual, string destinoHabitual, string retiroEnvio, string entregaEnvio) => throw new NotSupportedException();
+            public Task<List<string>> BuscarDireccionesAsync(string texto) => throw new NotSupportedException();
         }
     }
 }

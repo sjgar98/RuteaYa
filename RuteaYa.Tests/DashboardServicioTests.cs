@@ -16,7 +16,7 @@ namespace RuteaYa.Tests
         private readonly ViajeServicioFalso _viajes = new ViajeServicioFalso();
         private readonly EnvioServicioFalso _envios = new EnvioServicioFalso();
         private readonly OportunidadesServicioFalso _oportunidades = new OportunidadesServicioFalso();
-        private readonly OptimizadorServicioFalso _optimizador = new OptimizadorServicioFalso();
+        private readonly PotencialServicioFalso _potencial = new PotencialServicioFalso();
 
         [Fact]
         public void CalcularProximasSalidas_HoyYaSalio_EmpiezaDesdeLaProximaFecha()
@@ -115,52 +115,24 @@ namespace RuteaYa.Tests
             inactivo.Activo = false;
             _viajes.Viajes.Add(inactivo);
             _oportunidades.PorViaje[1] = new List<int> { 10 };
-            _optimizador.PorViaje[1] = new List<OportunidadDto> { CrearOportunidad(10, 5000m, Hoy()) };
 
             var dashboard = await CrearServicio().ObtenerAsync(UsuarioId);
 
             Assert.Equal(0, dashboard.ViajesActivos);
             Assert.Equal(0, dashboard.CantidadOportunidades);
-            Assert.Equal(0m, dashboard.PotencialMes);
         }
 
         [Fact]
-        public async Task ObtenerAsync_Potencial_SumaLaOptimaDeCadaViajeSinRepetirEnvios()
+        public async Task ObtenerAsync_Potencial_UsaElPotencialDelMesActualConCriterioGanancia()
         {
-            _viajes.Viajes.Add(CrearViaje(1, new TimeOnly(8, 0), DiaSemana.Lunes));
-            _viajes.Viajes.Add(CrearViaje(2, new TimeOnly(9, 0), DiaSemana.Martes));
-            _optimizador.PorViaje[1] = new List<OportunidadDto>
-            {
-                CrearOportunidad(10, 4000m, Hoy()),
-                CrearOportunidad(11, 5500m, Hoy())
-            };
-            // El envío 11 ya se contó en el viaje 1.
-            _optimizador.PorViaje[2] = new List<OportunidadDto>
-            {
-                CrearOportunidad(11, 5500m, Hoy()),
-                CrearOportunidad(12, 2500m, Hoy())
-            };
+            _potencial.Resultado = new PotencialMensualDto { GananciaPotencial = 12000m, PaquetesPosibles = 3 };
 
             var dashboard = await CrearServicio().ObtenerAsync(UsuarioId);
 
             Assert.Equal(12000m, dashboard.PotencialMes);
             Assert.Equal(3, dashboard.PaquetesPotencialMes);
-        }
-
-        [Fact]
-        public async Task ObtenerAsync_Potencial_NoCuentaEnviosDeOtroMes()
-        {
-            _viajes.Viajes.Add(CrearViaje(1, new TimeOnly(8, 0), DiaSemana.Lunes));
-            _optimizador.PorViaje[1] = new List<OportunidadDto>
-            {
-                CrearOportunidad(10, 4000m, Hoy()),
-                CrearOportunidad(11, 7000m, Hoy().AddMonths(1))
-            };
-
-            var dashboard = await CrearServicio().ObtenerAsync(UsuarioId);
-
-            Assert.Equal(4000m, dashboard.PotencialMes);
-            Assert.Equal(1, dashboard.PaquetesPotencialMes);
+            Assert.Equal(Hoy().ToString("yyyy-MM"), _potencial.MesPedido);
+            Assert.Equal("ganancia", _potencial.CriterioPedido);
         }
 
         [Fact]
@@ -177,7 +149,7 @@ namespace RuteaYa.Tests
 
         private DashboardServicio CrearServicio()
         {
-            return new DashboardServicio(_viajes, _envios, _oportunidades, _optimizador);
+            return new DashboardServicio(_viajes, _envios, _oportunidades, _potencial);
         }
 
         // Misma "hoy" que usa el servicio (Argentina).
@@ -203,11 +175,6 @@ namespace RuteaYa.Tests
         private static EnvioDto CrearEnvio(int id, EstadoEnvio estado, DateOnly fechaLimite)
         {
             return new EnvioDto { Id = id, Estado = estado, FechaLimite = fechaLimite, Descripcion = "Paquete" };
-        }
-
-        private static OportunidadDto CrearOportunidad(int envioId, decimal monto, DateOnly fechaViaje)
-        {
-            return new OportunidadDto { EnvioId = envioId, MontoPago = monto, FechaViaje = fechaViaje };
         }
 
         private class ViajeServicioFalso : IViajeServicio
@@ -260,19 +227,17 @@ namespace RuteaYa.Tests
             public Task<EvaluacionOportunidad> EvaluarCompatibilidadAsync(Viaje viaje, Envio envio, int usuarioId, DateOnly hoy) => throw new NotImplementedException();
         }
 
-        private class OptimizadorServicioFalso : IOptimizadorServicio
+        private class PotencialServicioFalso : IPotencialServicio
         {
-            // Envíos de la combinación óptima de cada viaje.
-            public Dictionary<int, List<OportunidadDto>> PorViaje { get; } = new Dictionary<int, List<OportunidadDto>>();
+            public PotencialMensualDto? Resultado { get; set; }
+            public string? MesPedido { get; private set; }
+            public string? CriterioPedido { get; private set; }
 
-            public Task<OptimizacionResultadoDto?> OptimizarAsync(int usuarioId, int viajeId, string? criterio = "ganancia")
+            public Task<PotencialMensualDto?> ObtenerPotencialAsync(int usuarioId, string mes, string? criterio = "ganancia")
             {
-                var envios = PorViaje.GetValueOrDefault(viajeId, new List<OportunidadDto>());
-                return Task.FromResult<OptimizacionResultadoDto?>(new OptimizacionResultadoDto
-                {
-                    ViajeId = viajeId,
-                    Optima = new CombinacionDto { Envios = envios, GananciaTotal = envios.Sum(e => e.MontoPago) }
-                });
+                MesPedido = mes;
+                CriterioPedido = criterio;
+                return Task.FromResult(Resultado);
             }
         }
     }

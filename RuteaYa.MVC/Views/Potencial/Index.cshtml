@@ -1,76 +1,89 @@
 @model RuteaYa.DTOs.PotencialMensualDto
 @{
-    ViewData["Title"] = "Potencial de Ganancias Mensual";
-    var mesActual = ViewData["MesActual"]?.ToString() ?? DateTime.UtcNow.ToString("yyyy-MM");
+    ViewData["Title"] = "Potencial de ganancias mensual";
+    var mesActual = ViewData["MesActual"]?.ToString() ?? Model.Mes;
     var criterioActual = ViewData["CriterioActual"]?.ToString() ?? "ganancia";
+    var criterios = new[]
+    {
+        ("ganancia", "Maximizar ganancias"),
+        ("desvio", "Minimizar desvíos"),
+        ("equilibrio", "Equilibrio")
+    };
 }
 
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
             <h2 class="fw-bold mb-1 fs-3">Potencial de ganancias mensual</h2>
-            <p class="text-muted mb-0 small">Estimación basada en tus viajes recurrentes y envíos disponibles actuales.</p>
+            <p class="text-muted mb-0 small">Estimación con tus viajes activos y los envíos disponibles hoy. No es ganancia efectiva: lo cobrado está en <a asp-controller="Historial" asp-action="Index">Historial</a>.</p>
         </div>
-        
-        <!-- Formulario de filtro con ID explícito para evitar conflictos -->
+
         <form method="get" asp-controller="Potencial" asp-action="Index" id="formFiltro" class="row g-2 align-items-center">
             <div class="col-auto">
-                <input type="month" id="mes" name="mes" value="@mesActual" class="form-control form-control-sm" onchange="document.getElementById('formFiltro').submit()" />
+                <input type="month" id="mes" name="mes" value="@mesActual" class="form-control form-control-sm" onchange="this.form.submit()" />
             </div>
-            <input type="hidden" name="criterio" id="criterioInput" value="@criterioActual" />
+            <input type="hidden" name="criterio" value="@criterioActual" />
         </form>
     </div>
 
-    <!-- Criterios de Optimización (Pills) -->
-    <div class="mb-4">
-        <span class="text-muted me-2 small fw-semibold">Criterio de optimización:</span>
-        <div class="btn-group btn-group-sm" role="group">
-            <button type="button" class="btn @(criterioActual == "todos" ? "btn-dark" : "btn-outline-secondary") rounded-pill px-3 me-2" onclick="cambiarCriterio('todos')">Total viajes disponibles</button>
-            <button type="button" class="btn @(criterioActual == "ganancia" ? "btn-dark" : "btn-outline-secondary") rounded-pill px-3 me-2" onclick="cambiarCriterio('ganancia')">Maximizar ganancias</button>
-            <button type="button" class="btn @(criterioActual == "desvio" ? "btn-dark" : "btn-outline-secondary") rounded-pill px-3 me-2" onclick="cambiarCriterio('desvio')">Minimizar desvíos</button>
-            <button type="button" class="btn @(criterioActual == "equilibrio" ? "btn-dark" : "btn-outline-secondary") rounded-pill px-3" onclick="cambiarCriterio('equilibrio')">Equilibrio</button>
-        </div>
+    @if (ViewData["Error"] is string error)
+    {
+        <div class="alert alert-danger">@error</div>
+    }
+
+    <div class="mb-4 d-flex flex-wrap align-items-center gap-2">
+        <span class="text-muted small fw-semibold">Criterio de optimización:</span>
+        @foreach (var (valor, texto) in criterios)
+        {
+            <a asp-action="Index" asp-route-mes="@mesActual" asp-route-criterio="@valor"
+               class="btn btn-sm rounded-pill px-3 @(criterioActual == valor ? "btn-dark" : "btn-outline-secondary")">@texto</a>
+        }
     </div>
 
-    <!-- Tarjetas de Métricas Principales (Textos achicados y proporcionados) -->
     <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 p-3 bg-success-subtle text-success-emphasis">
-                <span class="small text-uppercase fw-bold text-success">Ganancia potencial</span>
+        <div class="col-6 col-md">
+            <div class="card border-0 shadow-sm rounded-4 p-3 h-100 bg-success-subtle text-success-emphasis">
+                <span class="small text-uppercase fw-bold">Ganancia potencial</span>
                 <h4 class="fw-bold fs-4 mb-0 mt-1">@Model.GananciaPotencial.Moneda()</h4>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 p-3">
+        <div class="col-6 col-md">
+            <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
+                <span class="small text-uppercase text-muted fw-bold">Viajes analizados</span>
+                <h4 class="fw-bold fs-4 mb-0 mt-1">@Model.ViajesAnalizados</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md">
+            <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
+                <span class="small text-uppercase text-muted fw-bold">Paquetes posibles</span>
+                <h4 class="fw-bold fs-4 mb-0 mt-1">@Model.PaquetesPosibles</h4>
+            </div>
+        </div>
+        <div class="col-6 col-md">
+            <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
                 <span class="small text-uppercase text-muted fw-bold">Promedio por viaje</span>
                 <h4 class="fw-bold fs-4 mb-0 mt-1">@Model.PromedioPorViaje.Moneda()</h4>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 p-3">
+        <div class="col-12 col-md">
+            <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
                 <span class="small text-uppercase text-muted fw-bold">Ganancia por semana</span>
                 <h4 class="fw-bold fs-4 mb-0 mt-1">@Model.GananciaPorSemana.Moneda()</h4>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm rounded-4 p-3">
-                <span class="small text-uppercase text-muted fw-bold">Viajes analizados</span>
-                <h4 class="fw-bold fs-5 mb-0 mt-1">@Model.PaquetesPosibles <span class="fs-6 text-muted fw-normal">paq. en @Model.ViajesAnalizados viajes</span></h4>
-            </div>
-        </div>
     </div>
 
-    <!-- Detalle de Asignaciones y Recorridos Estimados -->
-    <div class="card border-0 shadow-sm rounded-4 p-4">
-        <h5 class="fw-bold mb-3">Detalle del mejor recorrido estimado</h5>
-        @if (Model.MejorRecorrido != null && Model.MejorRecorrido.Any())
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <h5 class="fw-bold mb-3">Mejor recorrido estimado</h5>
+        @if (Model.MejorRecorrido.Any())
         {
             <div class="table-responsive">
-                <table class="table align-middle table-hover small">
+                <table class="table align-middle table-hover small mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Fecha</th>
-                            <th>Viaje recurrente</th>
+                            <th>Viaje</th>
+                            <th>Salidas en el mes</th>
+                            <th>Primera fecha</th>
                             <th>Paquetes</th>
                             <th>Peso total</th>
                             <th>Desvío total</th>
@@ -81,10 +94,11 @@
                         @foreach (var item in Model.MejorRecorrido)
                         {
                             <tr>
+                                <td class="fw-semibold"><a asp-controller="Viajes" asp-action="Detalle" asp-route-id="@item.ViajeId" class="text-reset">@item.OrigenDestino</a></td>
+                                <td>@item.SalidasEnPeriodo</td>
                                 <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
-                                <td class="fw-semibold">@item.OrigenDestino</td>
                                 <td>@item.PaquetesAsignados</td>
-                               <td>@item.PesoTotalKg.Numero() kg</td>
+                                <td>@item.PesoTotalKg.Numero() kg</td>
                                 <td>@item.DesvioTotalKm.Numero() km</td>
                                 <td class="text-end fw-bold text-success">@item.GananciaEstimada.Moneda()</td>
                             </tr>
@@ -96,18 +110,40 @@
         else
         {
             <div class="text-center py-5 text-muted">
-                <p class="mb-0 small">No se encontraron suficientes oportunidades compatibles para estimar un potencial en este mes.</p>
+                <p class="mb-0 small">No hay envíos compatibles con tus viajes activos para este mes.</p>
             </div>
         }
     </div>
-</div>
 
-@section Scripts {
-    <script>
-        function cambiarCriterio(criterio) {
-            document.getElementById('criterioInput').value = criterio;
-            // Apuntamos de forma limpia al formulario de filtros por su ID en lugar de usar forms[0]
-            document.getElementById('formFiltro').submit();
-        }
-    </script>
-}
+    @if (Model.DetalleAsignaciones.Any())
+    {
+        <div class="card border-0 shadow-sm rounded-4 p-4">
+            <h5 class="fw-bold mb-3">Envíos considerados</h5>
+            <div class="table-responsive">
+                <table class="table align-middle table-hover small mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Envío</th>
+                            <th>Recorrido del envío</th>
+                            <th>Viaje</th>
+                            <th class="text-end">Pago</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var envio in Model.DetalleAsignaciones)
+                        {
+                            <tr>
+                                <td>@envio.FechaViaje.ToString("dd/MM/yyyy")</td>
+                                <td>@envio.Descripcion</td>
+                                <td>@envio.OrigenDestinoEnvio</td>
+                                <td>@envio.ViajeAsociado</td>
+                                <td class="text-end">@envio.Monto.Moneda()</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>

@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
 using RuteaYa.API.Servicios;
 using RuteaYa.DTOs;
 using RuteaYa.DTOs.Enums;
 using RuteaYa.Entidades;
+using RuteaYa.Repositorios.Interfaces;
 
 namespace RuteaYa.Tests
 {
@@ -10,19 +10,15 @@ namespace RuteaYa.Tests
     {
         private const int UsuarioId = 1;
 
-        private RuteaYaDbContext CrearContextoBD(string nombreDb)
-        {
-            var options = new DbContextOptionsBuilder<RuteaYaDbContext>()
-                .UseInMemoryDatabase(databaseName: nombreDb)
-                .Options;
-            return new RuteaYaDbContext(options);
-        }
+        private readonly AsignacionRepositorioFalso _asignaciones = new AsignacionRepositorioFalso();
+        private readonly ViajeRepositorioFalso _viajes = new ViajeRepositorioFalso();
+
+        private HistorialServicio CrearServicio() => new HistorialServicio(_asignaciones, _viajes);
 
         [Fact]
         public async Task ObtenerHistorialAsync_SinAsignaciones_DevuelveMetricasEnCeroEItemsVacios()
         {
-            using var context = CrearContextoBD("Historial_Vacio");
-            var servicio = new HistorialServicio(context);
+            var servicio = CrearServicio();
 
             var resultado = await servicio.ObtenerHistorialAsync(UsuarioId, null, null, null, null);
 
@@ -36,8 +32,6 @@ namespace RuteaYa.Tests
         [Fact]
         public async Task ObtenerHistorialAsync_ConAsignacionesEntregadas_CalculaMetricasYAgrupaCorrectamente()
         {
-            using var context = CrearContextoBD("Historial_ConDatos");
-
             var viaje = new Viaje
             {
                 Id = 10,
@@ -46,7 +40,7 @@ namespace RuteaYa.Tests
                 DestinoDir = "Obelisco, CABA",
                 Activo = true
             };
-            context.Viajes.Add(viaje);
+            _viajes.Viajes.Add(viaje);
 
             var envio = new Envio
             {
@@ -55,7 +49,6 @@ namespace RuteaYa.Tests
                 Estado = EstadoEnvio.Entregado,
                 Monto = 5000m
             };
-            context.Envios.Add(envio);
 
             var asignacion = new Asignacion
             {
@@ -67,10 +60,9 @@ namespace RuteaYa.Tests
                 Viaje = viaje,
                 Envio = envio
             };
-            context.Asignaciones.Add(asignacion);
-            await context.SaveChangesAsync();
+            _asignaciones.Asignaciones.Add(asignacion);
 
-            var servicio = new HistorialServicio(context);
+            var servicio = CrearServicio();
             var resultado = await servicio.ObtenerHistorialAsync(UsuarioId, null, null, null, null);
 
             Assert.NotNull(resultado);
@@ -88,16 +80,13 @@ namespace RuteaYa.Tests
         [Fact]
         public async Task ObtenerHistorialAsync_AplicaFiltroDeFechasCorrectamente()
         {
-            using var context = CrearContextoBD("Historial_FiltroFechas");
-
             var viaje = new Viaje { Id = 1, UsuarioId = UsuarioId, OrigenDir = "A", DestinoDir = "B", Activo = true };
             var envio1 = new Envio { Id = 10, UsuarioId = 2, Estado = EstadoEnvio.Entregado, Monto = 3000m };
             var envio2 = new Envio { Id = 11, UsuarioId = 2, Estado = EstadoEnvio.Entregado, Monto = 4000m };
 
-            context.Viajes.Add(viaje);
-            context.Envios.AddRange(envio1, envio2);
-
-            context.Asignaciones.Add(new Asignacion
+            _viajes.Viajes.Add(viaje);
+            
+            _asignaciones.Asignaciones.Add(new Asignacion
             {
                 Id = 1,
                 ViajeId = 1,
@@ -107,7 +96,7 @@ namespace RuteaYa.Tests
                 Viaje = viaje,
                 Envio = envio1
             });
-            context.Asignaciones.Add(new Asignacion
+            _asignaciones.Asignaciones.Add(new Asignacion
             {
                 Id = 2,
                 ViajeId = 1,
@@ -117,9 +106,8 @@ namespace RuteaYa.Tests
                 Viaje = viaje,
                 Envio = envio2
             });
-            await context.SaveChangesAsync();
 
-            var servicio = new HistorialServicio(context);
+            var servicio = CrearServicio();
 
             // Filtrar desde el 1 de noviembre de 2026 en adelante
             var desde = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -136,17 +124,14 @@ namespace RuteaYa.Tests
         [InlineData("monto_desc")]
         public async Task ObtenerHistorialAsync_AplicaOrdenamientosCorrectamente(string criterioOrden)
         {
-            using var context = CrearContextoBD($"Historial_Orden_{criterioOrden}");
-
             var viaje1 = new Viaje { Id = 1, UsuarioId = UsuarioId, OrigenDir = "A", DestinoDir = "B", Activo = true };
             var viaje2 = new Viaje { Id = 2, UsuarioId = UsuarioId, OrigenDir = "C", DestinoDir = "D", Activo = true };
             var envio1 = new Envio { Id = 10, UsuarioId = 2, Estado = EstadoEnvio.Entregado, Monto = 1000m };
             var envio2 = new Envio { Id = 11, UsuarioId = 2, Estado = EstadoEnvio.Entregado, Monto = 5000m };
 
-            context.Viajes.AddRange(viaje1, viaje2);
-            context.Envios.AddRange(envio1, envio2);
-
-            context.Asignaciones.Add(new Asignacion
+            _viajes.Viajes.AddRange(new[] { viaje1, viaje2 });
+            
+            _asignaciones.Asignaciones.Add(new Asignacion
             {
                 Id = 1,
                 ViajeId = 1,
@@ -156,7 +141,7 @@ namespace RuteaYa.Tests
                 Viaje = viaje1,
                 Envio = envio1
             });
-            context.Asignaciones.Add(new Asignacion
+            _asignaciones.Asignaciones.Add(new Asignacion
             {
                 Id = 2,
                 ViajeId = 2,
@@ -166,13 +151,43 @@ namespace RuteaYa.Tests
                 Viaje = viaje2,
                 Envio = envio2
             });
-            await context.SaveChangesAsync();
 
-            var servicio = new HistorialServicio(context);
+            var servicio = CrearServicio();
             var resultado = await servicio.ObtenerHistorialAsync(UsuarioId, null, null, criterioOrden, null);
 
             Assert.NotNull(resultado);
             Assert.Equal(2, resultado.Items.Count);
+        }
+
+        private class AsignacionRepositorioFalso : IAsignacionRepositorio
+        {
+            public List<Asignacion> Asignaciones { get; } = new List<Asignacion>();
+
+            public Task<List<Asignacion>> ListarEntregadasPorConductorAsync(int conductorId, DateTime? desde, DateTime? hasta)
+            {
+                return Task.FromResult(Asignaciones
+                    .Where(a => a.Viaje.UsuarioId == conductorId && a.Envio.Estado == EstadoEnvio.Entregado)
+                    .Where(a => !desde.HasValue || a.AsignadoEn >= desde.Value)
+                    .Where(a => !hasta.HasValue || a.AsignadoEn <= hasta.Value)
+                    .ToList());
+            }
+
+            public Task<List<Asignacion>> ListarPorConductorAsync(int conductorId) => throw new NotImplementedException();
+            public Task<Asignacion?> ObtenerPorIdAsync(int id) => throw new NotImplementedException();
+            public Task AgregarAsync(List<Asignacion> asignaciones) => throw new NotImplementedException();
+            public Task GuardarCambiosAsync() => throw new NotImplementedException();
+        }
+
+        private class ViajeRepositorioFalso : IViajeRepositorio
+        {
+            public List<Viaje> Viajes { get; } = new List<Viaje>();
+
+            public Task<List<Viaje>> ListarPorUsuarioAsync(int usuarioId, bool? activo = null)
+                => Task.FromResult(Viajes.Where(v => v.UsuarioId == usuarioId && (activo == null || v.Activo == activo)).ToList());
+
+            public Task<Viaje?> ObtenerPorIdAsync(int id) => throw new NotImplementedException();
+            public Task AgregarAsync(Viaje viaje) => throw new NotImplementedException();
+            public Task GuardarCambiosAsync() => throw new NotImplementedException();
         }
     }
 }

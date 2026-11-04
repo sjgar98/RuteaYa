@@ -1,3 +1,4 @@
+using System.Globalization;
 using RuteaYa.API.Servicios.Interfaces;
 using RuteaYa.DTOs;
 using RuteaYa.DTOs.Enums;
@@ -22,18 +23,18 @@ namespace RuteaYa.API.Servicios
         private readonly IViajeServicio _viajeServicio;
         private readonly IEnvioServicio _envioServicio;
         private readonly IOportunidadesServicio _oportunidadesServicio;
-        private readonly IOptimizadorServicio _optimizadorServicio;
+        private readonly IPotencialServicio _potencialServicio;
 
         public DashboardServicio(
             IViajeServicio viajeServicio,
             IEnvioServicio envioServicio,
             IOportunidadesServicio oportunidadesServicio,
-            IOptimizadorServicio optimizadorServicio)
+            IPotencialServicio potencialServicio)
         {
             _viajeServicio = viajeServicio;
             _envioServicio = envioServicio;
             _oportunidadesServicio = oportunidadesServicio;
-            _optimizadorServicio = optimizadorServicio;
+            _potencialServicio = potencialServicio;
         }
 
         public async Task<DashboardDto> ObtenerAsync(int usuarioId)
@@ -66,24 +67,10 @@ namespace RuteaYa.API.Servicios
             }
             dashboard.CantidadOportunidades = enviosCompatibles.Count;
 
-            // TODO Potencial: cuando exista el servicio de Potencial mensual (Pantalla 14), usar su total.
-            // Mientras tanto se toma la combinación óptima de cada viaje, sin repetir envíos entre viajes
-            // (quitar envíos de una combinación válida la deja válida).
-            var hoy = DateOnly.FromDateTime(ahora);
-            var enviosContados = new HashSet<int>();
-            foreach (var viaje in viajesActivos)
-            {
-                var optimizacion = await _optimizadorServicio.OptimizarAsync(usuarioId, viaje.Id, "ganancia");
-                var enviosDelMes = (optimizacion?.Optima.Envios ?? new List<OportunidadDto>())
-                    .Where(e => e.FechaViaje.Year == hoy.Year && e.FechaViaje.Month == hoy.Month)
-                    .Where(e => enviosContados.Add(e.EnvioId));
-
-                foreach (var envio in enviosDelMes)
-                {
-                    dashboard.PotencialMes += envio.MontoPago;
-                    dashboard.PaquetesPotencialMes++;
-                }
-            }
+            var mes = ahora.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+            var potencial = await _potencialServicio.ObtenerPotencialAsync(usuarioId, mes, "ganancia");
+            dashboard.PotencialMes = potencial?.GananciaPotencial ?? 0;
+            dashboard.PaquetesPotencialMes = potencial?.PaquetesPosibles ?? 0;
 
             return dashboard;
         }

@@ -661,6 +661,7 @@ namespace RuteaYa.Tests
                 return Task.FromResult(Agregadas.ToList());
             }
 
+            public Task<List<Asignacion>> ListarEntregadasPorConductorAsync(int conductorId, DateTime? desde, DateTime? hasta) => throw new NotImplementedException();
             public Task<Asignacion?> ObtenerPorIdAsync(int id)
             {
                 return Task.FromResult(Agregadas.FirstOrDefault(a => a.Id == id));

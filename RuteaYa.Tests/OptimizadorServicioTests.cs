@@ -314,6 +314,26 @@ namespace RuteaYa.Tests
             Assert.Empty(resultado.Descartados);
         }
 
+        [Fact]
+        public async Task OptimizarViajeAsync_SaltaExcluidosYEnviosSinSalidaEnElPeriodo()
+        {
+            var viaje = CrearViaje();
+            viaje.Dias.Clear();
+            viaje.Dias.Add(new ViajeDia { ViajeId = ViajeId, DiaSemana = DiaSemana.Lunes });
+            _viajes.Viajes.Add(viaje);
+            _envios.Envios.Add(CrearEnvio(1));
+            _envios.Envios.Add(CrearEnvio(2, fechaLimite: new DateOnly(2026, 11, 30)));
+
+            var desde = new DateOnly(2026, 11, 10);
+            var resultado = await CrearServicio().OptimizarViajeAsync(
+                viaje, ConductorId, "ganancia", desde, desde.AddDays(3), new HashSet<int> { 1 });
+
+            Assert.Empty(resultado.Optima.Envios);
+            var descartado = Assert.Single(resultado.Descartados);
+            Assert.Equal(2, descartado.EnvioId);
+            Assert.Equal("Sin salida del viaje en el período", descartado.Motivo);
+        }
+
         // ---------- Datos de prueba ----------
 
         private static Viaje CrearViaje(int usuarioId = ConductorId, int maxPaquetes = 3,
@@ -412,6 +432,7 @@ namespace RuteaYa.Tests
         private class AsignacionRepositorioFalso : IAsignacionRepositorio
         {
             public Task<List<Asignacion>> ListarPorConductorAsync(int conductorId) => Task.FromResult(new List<Asignacion>());
+            public Task<List<Asignacion>> ListarEntregadasPorConductorAsync(int conductorId, DateTime? desde, DateTime? hasta) => throw new NotImplementedException();
             public Task<Asignacion?> ObtenerPorIdAsync(int id) => Task.FromResult<Asignacion?>(null);
             public Task AgregarAsync(List<Asignacion> asignaciones) => Task.CompletedTask;
             public Task GuardarCambiosAsync() => Task.CompletedTask;

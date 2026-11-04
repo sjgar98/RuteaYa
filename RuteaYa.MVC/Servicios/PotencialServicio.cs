@@ -18,7 +18,7 @@ namespace RuteaYa.MVC.Servicios
         {
             var respuesta = await _http.GetAsync($"api/potencial?mes={Uri.EscapeDataString(mes)}&criterio={Uri.EscapeDataString(criterio)}");
 
-            if (respuesta.StatusCode == HttpStatusCode.NotFound)
+            if (respuesta.StatusCode == HttpStatusCode.BadRequest)
             {
                 return null;
             }

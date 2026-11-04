@@ -1,7 +1,4 @@
-using Microsoft.EntityFrameworkCore;
 using RuteaYa.DTOs;
-using RuteaYa.DTOs.Enums;
-using RuteaYa.Entidades;
 using RuteaYa.Repositorios.Interfaces;
 using RuteaYa.API.Servicios.Interfaces;
 
@@ -9,31 +6,19 @@ namespace RuteaYa.API.Servicios
 {
     public class HistorialServicio : IHistorialServicio
     {
-        private readonly RuteaYaDbContext _context;
+        private readonly IAsignacionRepositorio _asignacionRepositorio;
+        private readonly IViajeRepositorio _viajeRepositorio;
 
-        public HistorialServicio(RuteaYaDbContext context)
+        public HistorialServicio(IAsignacionRepositorio asignacionRepositorio, IViajeRepositorio viajeRepositorio)
         {
-            _context = context;
+            _asignacionRepositorio = asignacionRepositorio;
+            _viajeRepositorio = viajeRepositorio;
         }
 
         public async Task<HistorialDto> ObtenerHistorialAsync(int usuarioId, DateTime? desde, DateTime? hasta, string? orden, string? estado)
         {
-  
-            var asignacionesQuery = _context.Asignaciones
-                .Include(a => a.Viaje)
-                .Include(a => a.Envio)
-                .Where(a => a.Viaje.UsuarioId == usuarioId && a.Envio.Estado == EstadoEnvio.Entregado);
-
-            if (desde.HasValue)
-                asignacionesQuery = asignacionesQuery.Where(a => a.AsignadoEn >= desde.Value);
-            if (hasta.HasValue)
-                asignacionesQuery = asignacionesQuery.Where(a => a.AsignadoEn <= hasta.Value);
-
-            var asignacionesList = await asignacionesQuery.ToListAsync();
-
-            int totalViajesInactivos = await _context.Viajes
-                .Where(v => v.UsuarioId == usuarioId && !v.Activo)
-                .CountAsync();
+            var asignacionesList = await _asignacionRepositorio.ListarEntregadasPorConductorAsync(usuarioId, desde, hasta);
+            var totalViajesInactivos = (await _viajeRepositorio.ListarPorUsuarioAsync(usuarioId, false)).Count;
 
             int viajesRealizadosCount = asignacionesList.Select(a => a.ViajeId).Distinct().Count();
             int totalViajes = Math.Max(viajesRealizadosCount, totalViajesInactivos);

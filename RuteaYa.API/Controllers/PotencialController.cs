@@ -18,10 +18,19 @@ namespace RuteaYa.API.Controllers
             _potencialServicio = potencialServicio;
         }
 
+        /// <summary>
+        /// Estima la ganancia potencial de un mes aplicando el optimizador a cada viaje activo del usuario
+        /// con salidas en el mes (desde hoy si es el mes actual), sin repetir un envío entre viajes.
+        /// </summary>
+        /// <param name="mes">Mes a analizar con formato yyyy-MM.</param>
+        /// <param name="criterio">"ganancia" (default), "desvio" o "equilibrio".</param>
+        /// <response code="200">Resumen del potencial mensual con el detalle por viaje y por envío.</response>
+        /// <response code="400">El mes no tiene el formato yyyy-MM.</response>
         [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(PotencialMensualDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult<PotencialMensualDto>> GetPotencial(
+        public async Task<ActionResult<PotencialMensualDto>> Obtener(
             [FromQuery] string mes,
             [FromQuery] string? criterio = "ganancia")
         {
@@ -30,7 +39,7 @@ namespace RuteaYa.API.Controllers
 
             if (resultado == null)
             {
-                return NotFound();
+                return Problem(title: "El mes debe tener el formato yyyy-MM.", statusCode: StatusCodes.Status400BadRequest);
             }
 
             return Ok(resultado);

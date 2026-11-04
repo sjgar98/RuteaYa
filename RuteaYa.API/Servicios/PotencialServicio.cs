@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using RuteaYa.API.Servicios.Interfaces;
 using RuteaYa.DTOs;
 using RuteaYa.DTOs.Enums;
@@ -9,163 +9,126 @@ namespace RuteaYa.API.Servicios
 {
     public class PotencialServicio : IPotencialServicio
     {
-        private readonly IViajeRepositorio _viajeRepositorio;
-        private readonly IEnvioRepositorio _envioRepositorio;
+        private static readonly TimeSpan _offsetArgentina = TimeSpan.FromHours(-3);
 
-        public PotencialServicio(
-            IViajeRepositorio viajeRepositorio,
-            IEnvioRepositorio envioRepositorio)
+        private readonly IViajeRepositorio _viajeRepositorio;
+        private readonly IOptimizadorServicio _optimizadorServicio;
+
+        public PotencialServicio(IViajeRepositorio viajeRepositorio, IOptimizadorServicio optimizadorServicio)
         {
             _viajeRepositorio = viajeRepositorio;
-            _envioRepositorio = envioRepositorio;
+            _optimizadorServicio = optimizadorServicio;
         }
 
-        public async Task<PotencialMensualDto?> ObtenerPotencialAsync(int usuarioId, string mes, string? criterio = "ganancia")
+        public Task<PotencialMensualDto?> ObtenerPotencialAsync(int usuarioId, string mes, string? criterio = "ganancia")
         {
-            if (!DateOnly.TryParse($"{mes}-01", out var fechaInicio))
-            {
-                fechaInicio = DateOnly.FromDateTime(DateTime.UtcNow);
-            }
-            var fechaFin = fechaInicio.AddMonths(1).AddDays(-1);
+            return ObtenerPotencialAsync(usuarioId, mes, criterio, DateOnly.FromDateTime(DateTime.UtcNow.Add(_offsetArgentina)));
+        }
 
-            var viajesActivos = await _viajeRepositorio.ListarPorUsuarioAsync(usuarioId);
-            var criterioNorm = NormalizarCriterioTexto(criterio);
-
-            if (viajesActivos == null || !viajesActivos.Any())
+        public async Task<PotencialMensualDto?> ObtenerPotencialAsync(int usuarioId, string mes, string? criterio, DateOnly hoy)
+        {
+            if (!IntentarLeerMes(mes, out var inicioMes))
             {
-                return new PotencialMensualDto
-                {
-                    Mes = mes,
-                    Criterio = criterioNorm,
-                    MejorRecorrido = new List<DetalleViajePotencialDto>()
-                };
+                return null;
             }
 
-            var enviosDisponibles = await _envioRepositorio.ListarDisponiblesRangoAsync(fechaInicio, fechaFin, usuarioId);
-
-            var todosLosCandidatos = new List<(Viaje Viaje, Envio Envio, decimal Desvio, decimal Ganancia)>();
-            var enviosAsignadosIds = new HashSet<int>();
-
-            // 1. Recolectar todas las combinaciones posibles válidas
-            foreach (var viaje in viajesActivos)
+            var criterioNorm = NormalizarCriterio(criterio);
+            var resultado = new PotencialMensualDto
             {
-                foreach (var envio in enviosDisponibles)
+                Mes = inicioMes.ToString("yyyy-MM", CultureInfo.InvariantCulture),
+                Criterio = criterioNorm
+            };
+
+            var desde = inicioMes > hoy ? inicioMes : hoy;
+            var hasta = inicioMes.AddMonths(1).AddDays(-1);
+            if (desde > hasta)
+            {
+                return resultado;
+            }
+
+            var viajes = await _viajeRepositorio.ListarPorUsuarioAsync(usuarioId, true);
+            var enviosUsados = new HashSet<int>();
+
+            foreach (var viaje in viajes.OrderBy(v => v.Id))
+            {
+                var salidas = ContarSalidas(viaje, desde, hasta);
+                if (salidas == 0)
                 {
-                    if (enviosAsignadosIds.Contains(envio.Id)) continue;
+                    continue;
+                }
 
-                    decimal distanciaOrigenEnvio = CalcularDistanciaKmLocal(viaje.OrigenLat, viaje.OrigenLng, envio.OrigenLat, envio.OrigenLng);
-                    decimal distanciaEnvioDestino = CalcularDistanciaKmLocal(envio.OrigenLat, envio.OrigenLng, envio.DestinoLat, envio.DestinoLng);
-                    decimal distanciaDestinoFinal = CalcularDistanciaKmLocal(envio.DestinoLat, envio.DestinoLng, viaje.DestinoLat, viaje.DestinoLng);
+                resultado.ViajesAnalizados++;
 
-                    decimal desvioTotal = distanciaOrigenEnvio + distanciaEnvioDestino + distanciaDestinoFinal - viaje.DistanciaKm;
-                    if (desvioTotal < 0) desvioTotal = 0;
+                var optimizacion = await _optimizadorServicio.OptimizarViajeAsync(viaje, usuarioId, criterioNorm, desde, hasta, enviosUsados);
+                var optima = optimizacion.Optima;
+                if (optima.Envios.Count == 0)
+                {
+                    continue;
+                }
 
-                    if (desvioTotal <= viaje.DesvioMaxKm && envio.PesoKg <= viaje.PesoMaxKg)
-                    {
-                        todosLosCandidatos.Add((viaje, envio, desvioTotal, envio.Monto));
-                    }
+                var origenDestino = $"{viaje.OrigenDir} → {viaje.DestinoDir}";
+                enviosUsados.UnionWith(optima.Envios.Select(e => e.EnvioId));
+
+                resultado.MejorRecorrido.Add(new DetalleViajePotencialDto
+                {
+                    ViajeId = viaje.Id,
+                    OrigenDestino = origenDestino,
+                    Fecha = optima.Envios.Min(e => e.FechaViaje),
+                    SalidasEnPeriodo = salidas,
+                    PaquetesAsignados = optima.CantidadPaquetes,
+                    PesoTotalKg = optima.PesoTotalKg,
+                    DesvioTotalKm = optima.DesvioTotalKm,
+                    GananciaEstimada = optima.GananciaTotal
+                });
+
+                resultado.DetalleAsignaciones.AddRange(optima.Envios.Select(e => new DetalleAsignacionPotencialDto
+                {
+                    EnvioId = e.EnvioId,
+                    Descripcion = e.Descripcion,
+                    OrigenDestinoEnvio = $"{e.Origen} → {e.Destino}",
+                    Monto = e.MontoPago,
+                    FechaViaje = e.FechaViaje,
+                    ViajeAsociado = origenDestino
+                }));
+            }
+
+            resultado.PaquetesPosibles = resultado.MejorRecorrido.Sum(r => r.PaquetesAsignados);
+            resultado.GananciaPotencial = resultado.MejorRecorrido.Sum(r => r.GananciaEstimada);
+            resultado.PromedioPorViaje = resultado.ViajesAnalizados == 0
+                ? 0
+                : Math.Round(resultado.GananciaPotencial / resultado.ViajesAnalizados, 2);
+
+            var semanas = (hasta.DayNumber - desde.DayNumber + 1) / 7m;
+            resultado.GananciaPorSemana = Math.Round(resultado.GananciaPotencial / semanas, 2);
+            resultado.DetalleAsignaciones = resultado.DetalleAsignaciones.OrderBy(d => d.FechaViaje).ToList();
+
+            return resultado;
+        }
+
+        public static bool IntentarLeerMes(string? mes, out DateOnly inicioMes)
+        {
+            return DateOnly.TryParseExact($"{mes}-01", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out inicioMes);
+        }
+
+        private static int ContarSalidas(Viaje viaje, DateOnly desde, DateOnly hasta)
+        {
+            var dias = viaje.Dias.Select(d => d.DiaSemana).ToHashSet();
+            var salidas = 0;
+            for (var fecha = desde; fecha <= hasta; fecha = fecha.AddDays(1))
+            {
+                if (dias.Contains(fecha.ADiaSemana()))
+                {
+                    salidas++;
                 }
             }
 
-            var detallesRecorrido = new List<DetalleViajePotencialDto>();
-            var enviosProcesados = new HashSet<int>();
-
-            // 2. Aplicar el filtro según el criterio seleccionado
-            var candidatosFiltrados = criterioNorm switch
-            {
-                "desvio" => todosLosCandidatos
-                    .Where(c => c.Desvio <= 2.0m) // Filtro estricto de desvío bajo
-                    .OrderBy(c => c.Desvio)
-                    .ThenByDescending(c => c.Ganancia)
-                    .ToList(),
-
-                "ganancia" => todosLosCandidatos
-                    .OrderByDescending(c => c.Ganancia)
-                    .ThenBy(c => c.Desvio)
-                    .ToList(),
-
-                "equilibrio" => todosLosCandidatos
-                    .OrderByDescending(c => c.Ganancia / (c.Desvio + 1m))
-                    .ToList(),
-
-                _ => todosLosCandidatos // "todos"
-                    .OrderByDescending(c => c.Envio.FechaLimite)
-                    .ToList()
-            };
-
-            // Si para "desvio" o "equilibrio" el filtro estricto deja la lista vacía por falta de datos, 
-            // tomamos al menos las mejores opciones disponibles para no romper la pantalla.
-            if (!candidatosFiltrados.Any() && todosLosCandidatos.Any())
-            {
-                candidatosFiltrados = todosLosCandidatos;
-            }
-
-            // 3. Mapear a los detalles evitando duplicar envíos en el mismo set
-            foreach (var c in candidatosFiltrados)
-            {
-                if (enviosProcesados.Contains(c.Envio.Id)) continue;
-                enviosProcesados.Add(c.Envio.Id);
-
-                detallesRecorrido.Add(new DetalleViajePotencialDto
-                {
-                    Fecha = c.Envio.FechaLimite,
-                    OrigenDestino = $"{c.Viaje.OrigenDir} ➔ {c.Viaje.DestinoDir}",
-                    PaquetesAsignados = 1,
-                    PesoTotalKg = c.Envio.PesoKg,
-                    DesvioTotalKm = Math.Round(c.Desvio, 2),
-                    GananciaEstimada = c.Ganancia
-                });
-            }
-
-            // Para el criterio "ganancia" o "equilibrio", si queremos acotarlo a 1 por viaje principal como antes, o mostrar todos los ordenados:
-            if (criterioNorm == "ganancia" || criterioNorm == "equilibrio")
-            {
-                // Tomamos el mejor por cada viaje activo para que sea un plan óptimo real
-                var unicosPorViaje = detallesRecorrido
-                    .GroupBy(d => d.OrigenDestino)
-                    .Select(g => g.First())
-                    .ToList();
-                detallesRecorrido = unicosPorViaje;
-            }
-
-            // 4. Recálculo total de métricas
-            decimal gananciaTotal = detallesRecorrido.Sum(d => d.GananciaEstimada);
-            int paquetesPosibles = detallesRecorrido.Count;
-            var promedioViaje = viajesActivos.Count != 0 ? Math.Round(gananciaTotal / viajesActivos.Count, 2) : 0;
-
-            return new PotencialMensualDto
-            {
-                Mes = mes,
-                Criterio = criterioNorm,
-                GananciaPotencial = gananciaTotal,
-                PromedioPorViaje = promedioViaje,
-                GananciaPorSemana = Math.Round(gananciaTotal / 4m, 2),
-                PaquetesPosibles = paquetesPosibles,
-                ViajesAnalizados = viajesActivos.Count,
-                MejorRecorrido = detallesRecorrido
-            };
+            return salidas;
         }
 
-        private decimal CalcularDistanciaKmLocal(decimal lat1, decimal lon1, decimal lat2, decimal lon2)
-        {
-            var dLat = (double)(lat2 - lat1) * Math.PI / 180.0;
-            var dLon = (double)(lon2 - lon1) * Math.PI / 180.0;
-
-            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
-                    Math.Cos((double)lat1 * Math.PI / 180.0) * Math.Cos((double)lat2 * Math.PI / 180.0) *
-                    Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
-
-            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-            var distanciaLineaRecta = 6371.0 * c;
-
-            return (decimal)(distanciaLineaRecta * 1.3);
-        }
-
-        private static string NormalizarCriterioTexto(string? criterio)
+        private static string NormalizarCriterio(string? criterio)
         {
             return criterio?.ToLowerInvariant() switch
             {
-                "todos" => "todos",
                 "desvio" => "desvio",
                 "equilibrio" => "equilibrio",
                 _ => "ganancia"
