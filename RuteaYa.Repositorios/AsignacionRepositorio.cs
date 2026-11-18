@@ -20,6 +20,7 @@ namespace RuteaYa.Repositorios
             return await _db.Asignaciones
                 .AsNoTracking()
                 .Include(a => a.Envio)
+                    .ThenInclude(e => e.Historial.OrderBy(h => h.Fecha))
                 .Include(a => a.Viaje)
                 .Where(a => a.Viaje.UsuarioId == conductorId)
                 .OrderByDescending(a => a.FechaViaje)

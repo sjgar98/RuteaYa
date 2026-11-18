@@ -8,6 +8,7 @@ namespace RuteaYa.MVC.Servicios.Interfaces
     {
         Task<List<EnvioDto>> ListarAsync(EstadoEnvio? estado);
         Task<EnvioDetalleDto?> ObtenerDetalleAsync(int id);
+        Task<ViajeDetalleDto?> ObtenerViajeAsociadoAsync(int envioId);
         Task<Dictionary<string, string[]>> CrearAsync(CrearEnvioDto dto);
         Task<ResultadoCancelacionEnvio> CancelarAsync(int id);
     }

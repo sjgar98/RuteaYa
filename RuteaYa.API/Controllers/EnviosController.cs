@@ -54,6 +54,24 @@ namespace RuteaYa.API.Controllers
             return Ok(envio);
         }
 
+        /// <summary>Obtiene el detalle del viaje asociado a un envío propio.</summary>
+        [HttpGet("{id:int}/viaje")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<ViajeDetalleDto>> ObtenerViaje(int id)
+        {
+            var usuarioId = User.ObtenerUsuarioId();
+            var viaje = await _envioServicio.ObtenerViajeAsociadoAsync(usuarioId, id);
+
+            if (viaje == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(viaje);
+        }
+
         /// <summary>Cancela un envío del usuario autenticado (solo si no fue retirado ni está en un estado final).</summary>
         /// <response code="204">Envío cancelado.</response>
         /// <response code="404">El envío no existe o pertenece a otro usuario.</response>

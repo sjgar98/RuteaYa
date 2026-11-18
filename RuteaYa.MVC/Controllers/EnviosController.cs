@@ -38,6 +38,17 @@ namespace RuteaYa.MVC.Controllers
             return View(envio);
         }
 
+        public async Task<IActionResult> Viaje(int id)
+        {
+            var viaje = await _envioServicio.ObtenerViajeAsociadoAsync(id);
+            if (viaje == null)
+            {
+                return NotFound();
+            }
+
+            return View("~/Views/Viajes/Detalle.cshtml", viaje);
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancelar(int id)

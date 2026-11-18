@@ -74,7 +74,14 @@
                         Desvío @Model.ViajeAsociado.DesvioKm.Numero() km ·
                         Ganancia @Model.ViajeAsociado.Ganancia.Moneda()
                     </div>
-                    <a class="btn btn-outline-secondary btn-sm" asp-controller="Viajes" asp-action="Detalle" asp-route-id="@Model.ViajeAsociado.ViajeId">Ver viaje</a>
+                    @if (ViewData["DesdeMisTransportes"] is true)
+                    {
+                        <a class="btn btn-outline-secondary btn-sm" asp-controller="Viajes" asp-action="Detalle" asp-route-id="@Model.ViajeAsociado.ViajeId">Ver viaje</a>
+                    }
+                    else
+                    {
+                        <a class="btn btn-outline-secondary btn-sm" asp-controller="Envios" asp-action="Viaje" asp-route-id="@Model.Id">Ver viaje</a>
+                    }
                 }
             </div>
         </div>

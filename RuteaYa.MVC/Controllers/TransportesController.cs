@@ -25,6 +25,18 @@ namespace RuteaYa.MVC.Controllers
             return View(modelo);
         }
 
+        public async Task<IActionResult> Envio(int id)
+        {
+            var envio = await _transporteServicio.ObtenerEnvioAsync(id);
+            if (envio == null)
+            {
+                return NotFound();
+            }
+
+            ViewData["DesdeMisTransportes"] = true;
+            return View("~/Views/Envios/Detalle.cshtml", envio);
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public Task<IActionResult> MarcarRetirado(int asignacionId)

@@ -21,6 +21,18 @@ namespace RuteaYa.MVC.Servicios
             return await _http.GetFromJsonAsync<List<TransporteDto>>("api/transportes") ?? new List<TransporteDto>();
         }
 
+        public async Task<EnvioDetalleDto?> ObtenerEnvioAsync(int asignacionId)
+        {
+            var respuesta = await _http.GetAsync($"api/transportes/{asignacionId}/envio");
+            if (respuesta.StatusCode == HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+
+            respuesta.EnsureSuccessStatusCode();
+            return await respuesta.Content.ReadFromJsonAsync<EnvioDetalleDto>();
+        }
+
         public Task<ResultadoCambioEstado> MarcarRetiradoAsync(int asignacionId)
         {
             return CambiarEstadoAsync($"api/transportes/{asignacionId}/retirado");
