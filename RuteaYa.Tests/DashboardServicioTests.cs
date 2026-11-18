@@ -203,6 +203,7 @@ namespace RuteaYa.Tests
             }
 
             public Task<EnvioDetalleDto?> ObtenerDetalleAsync(int usuarioId, int id) => throw new NotImplementedException();
+            public Task<ViajeDetalleDto?> ObtenerViajeAsociadoAsync(int usuarioId, int envioId) => throw new NotImplementedException();
             public Task<EnvioDto> CrearAsync(int usuarioId, CrearEnvioDto dto) => throw new NotImplementedException();
             public Task<ResultadoOperacion> CancelarAsync(int usuarioId, int id) => throw new NotImplementedException();
         }
