@@ -32,6 +32,17 @@ namespace RuteaYa.API.Controllers
             return Ok(transportes);
         }
 
+        /// <summary>Obtiene el detalle de un envío asignado a un viaje del usuario autenticado.</summary>
+        [HttpGet("{asignacionId:int}/envio")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<EnvioDetalleDto>> ObtenerEnvio(int asignacionId)
+        {
+            var envio = await _transporteServicio.ObtenerEnvioAsync(User.ObtenerUsuarioId(), asignacionId);
+            return envio == null ? NotFound() : Ok(envio);
+        }
+
         /// <summary>Marca un paquete como retirado.</summary>
         /// <response code="204">Estado actualizado.</response>
         /// <response code="404">La asignación no existe o pertenece a otro usuario.</response>

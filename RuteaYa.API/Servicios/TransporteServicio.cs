@@ -21,6 +21,50 @@ namespace RuteaYa.API.Servicios
             return asignaciones.Select(ADto).ToList();
         }
 
+        public async Task<EnvioDetalleDto?> ObtenerEnvioAsync(int conductorId, int asignacionId)
+        {
+            var asignacion = await _repositorio.ObtenerPorIdAsync(asignacionId);
+
+            if (asignacion == null || asignacion.Viaje.UsuarioId != conductorId)
+            {
+                return null;
+            }
+
+            var envio = asignacion.Envio;
+            return new EnvioDetalleDto
+            {
+                Id = envio.Id,
+                OrigenDir = envio.OrigenDir,
+                DestinoDir = envio.DestinoDir,
+                OrigenLat = envio.OrigenLat,
+                OrigenLng = envio.OrigenLng,
+                DestinoLat = envio.DestinoLat,
+                DestinoLng = envio.DestinoLng,
+                FechaLimite = envio.FechaLimite,
+                PesoKg = envio.PesoKg,
+                Tamano = envio.Tamano,
+                Descripcion = envio.Descripcion,
+                Monto = envio.Monto,
+                Estado = envio.Estado,
+                PuedeCancelar = false,
+                ViajeAsociado = new ViajeAsociadoDto
+                {
+                    ViajeId = asignacion.ViajeId,
+                    OrigenDir = asignacion.Viaje.OrigenDir,
+                    DestinoDir = asignacion.Viaje.DestinoDir,
+                    FechaViaje = asignacion.FechaViaje,
+                    DesvioKm = asignacion.DesvioKm,
+                    Ganancia = asignacion.Ganancia
+                },
+                Historial = envio.Historial.Select(h => new EnvioHistorialDto
+                {
+                    EstadoAnterior = h.EstadoAnterior,
+                    EstadoNuevo = h.EstadoNuevo,
+                    Fecha = h.Fecha
+                }).ToList()
+            };
+        }
+
         public Task<ResultadoOperacion> MarcarRetiradoAsync(int conductorId, int asignacionId)
         {
             return CambiarEstadoAsync(conductorId, asignacionId, EstadoEnvio.Retirado);

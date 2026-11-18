@@ -31,7 +31,7 @@
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <span class="badge rounded-pill @t.Estado.ClaseBadge()">@t.Estado.Texto()</span>
                         <a class="btn btn-outline-secondary btn-sm" asp-controller="Viajes" asp-action="Detalle" asp-route-id="@t.ViajeId">Ver viaje</a>
-                        <a class="btn btn-outline-secondary btn-sm" asp-controller="Envios" asp-action="Detalle" asp-route-id="@t.EnvioId">Ver envío</a>
+                        <a class="btn btn-outline-secondary btn-sm" asp-action="Envio" asp-route-id="@t.AsignacionId">Ver envío</a>
 
                         @if (t.PuedeMarcarRetirado)
                         {

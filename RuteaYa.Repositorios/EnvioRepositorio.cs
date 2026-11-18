@@ -67,6 +67,14 @@ namespace RuteaYa.Repositorios
             return await _db.Envios
                 .Include(e => e.Asignacion)
                     .ThenInclude(a => a!.Viaje)
+                        .ThenInclude(v => v!.Dias)
+                .Include(e => e.Asignacion)
+                    .ThenInclude(a => a!.Viaje)
+                        .ThenInclude(v => v!.Paradas.OrderBy(p => p.Orden))
+                .Include(e => e.Asignacion)
+                    .ThenInclude(a => a!.Viaje)
+                        .ThenInclude(v => v!.Asignaciones)
+                            .ThenInclude(a => a.Envio)
                 .Include(e => e.Historial.OrderBy(h => h.Fecha))
                 .FirstOrDefaultAsync(e => e.Id == id);
         }

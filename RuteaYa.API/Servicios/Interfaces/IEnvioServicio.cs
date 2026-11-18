@@ -7,6 +7,7 @@ namespace RuteaYa.API.Servicios.Interfaces
     {
         Task<List<EnvioDto>> ListarPorUsuarioAsync(int usuarioId, EstadoEnvio? estado);
         Task<EnvioDetalleDto?> ObtenerDetalleAsync(int usuarioId, int id);
+        Task<ViajeDetalleDto?> ObtenerViajeAsociadoAsync(int usuarioId, int envioId);
         Task<EnvioDto> CrearAsync(int usuarioId, CrearEnvioDto dto);
         Task<ResultadoOperacion> CancelarAsync(int usuarioId, int id);
     }

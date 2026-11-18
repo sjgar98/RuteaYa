@@ -34,6 +34,18 @@ namespace RuteaYa.API.Servicios
             return ADetalleDto(envio);
         }
 
+        public async Task<ViajeDetalleDto?> ObtenerViajeAsociadoAsync(int usuarioId, int envioId)
+        {
+            var envio = await _repositorio.ObtenerPorIdAsync(envioId);
+
+            if (envio == null || envio.UsuarioId != usuarioId || envio.Asignacion?.Viaje == null)
+            {
+                return null;
+            }
+
+            return AViajeDetalleDto(envio.Asignacion.Viaje);
+        }
+
         public async Task<ResultadoOperacion> CancelarAsync(int usuarioId, int id)
         {
             var envio = await _repositorio.ObtenerPorIdAsync(id);
@@ -122,6 +134,54 @@ namespace RuteaYa.API.Servicios
                     Fecha = h.Fecha
                 })
                 .ToList();
+
+            return dto;
+        }
+
+        private static ViajeDetalleDto AViajeDetalleDto(Viaje viaje)
+        {
+            var dto = new ViajeDetalleDto
+            {
+                Id = viaje.Id,
+                OrigenDir = viaje.OrigenDir,
+                DestinoDir = viaje.DestinoDir,
+                OrigenLat = viaje.OrigenLat,
+                OrigenLng = viaje.OrigenLng,
+                DestinoLat = viaje.DestinoLat,
+                DestinoLng = viaje.DestinoLng,
+                Dias = viaje.Dias.Select(d => d.DiaSemana).OrderBy(d => d).ToList(),
+                HoraSalida = viaje.HoraSalida,
+                HoraLlegada = viaje.HoraLlegada,
+                MaxPaquetes = viaje.MaxPaquetes,
+                PesoMaxKg = viaje.PesoMaxKg,
+                DesvioMaxKm = viaje.DesvioMaxKm,
+                DistanciaKm = viaje.DistanciaKm,
+                DuracionMin = viaje.DuracionMin,
+                Activo = viaje.Activo,
+                TieneEnviosPendientes = viaje.Asignaciones.Any(a => a.Envio.Estado == EstadoEnvio.ConductorAsignado
+                    || a.Envio.Estado == EstadoEnvio.Retirado
+                    || a.Envio.Estado == EstadoEnvio.EnCamino),
+                Paradas = viaje.Paradas
+                    .OrderBy(p => p.Orden)
+                    .Select(p => new DireccionDto { Direccion = p.Direccion, Lat = p.Lat, Lng = p.Lng })
+                    .ToList(),
+                PaquetesAsignados = viaje.Asignaciones
+                    .OrderBy(a => a.FechaViaje)
+                    .ThenBy(a => a.EnvioId)
+                    .Select(a => new PaqueteAsignadoDto
+                    {
+                        EnvioId = a.EnvioId,
+                        Origen = a.Envio.OrigenDir,
+                        Destino = a.Envio.DestinoDir,
+                        Descripcion = a.Envio.Descripcion,
+                        Estado = a.Envio.Estado,
+                        FechaViaje = a.FechaViaje,
+                        FechaLimite = a.Envio.FechaLimite,
+                        PesoKg = a.Envio.PesoKg,
+                        Ganancia = a.Ganancia
+                    })
+                    .ToList()
+            };
 
             return dto;
         }
